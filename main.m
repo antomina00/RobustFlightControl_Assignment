@@ -24,6 +24,7 @@ G_m = ss(A_sp, B_sp, C_sp, D_sp);
 G_m.InputName = 'u_m';
 G_m.StateName = {'x1', 'x2'};
 G_m.OutputName = {'y1', 'y2'};
+save G_m
 
 %% Defining the A, B, C, D matrices for the actuator model of the system as well as its state space model
 
@@ -36,3 +37,27 @@ G_act = ss(A_act, B_act, C_act, D_act);
 G_act.InputName = 'u_cmd';
 G_act.StateName = {'x3', 'x4'};
 G_act.OutputName = {'u_m', 'udot_m'};
+save G_act
+
+%% Loading Simulink model to obatin state space of open loop actuator + system dynamics 
+
+sys_am = "Airframe";
+open_system(sys_am)
+OP_am_object = operspec(sys_am);
+options = findopOptions;
+options.OptimizerType = 'graddescent';
+options.DisplayReport = 'on';
+[OP_am, OpPointReport] = findop(sys_am, OP_am_object, options);
+
+io = getlinio(sys_am);
+[G_am, LinPoint, LinModelReport] = linearize(sys_am, io, OP_am);
+T_reorder = [0,0,1,0;
+             0,0,0,1;
+             1,0,0,0;
+             0,1,0,0];
+G_am_reord = ss2ss(G_am, T_reorder);
+
+
+
+
+
