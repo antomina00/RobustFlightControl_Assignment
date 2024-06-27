@@ -49,7 +49,10 @@ OP_am_object = operspec(sys_am);
 % Set the operating point condition
 OP_am_object.States(2).Known(1,1) = 1;
 OP_am_object.States(2).SteadyState(1,1) = 1;
+OP_am_object.States(2).Min(1,1) = -alpha_FLC;
+OP_am_object.States(2).Max(1,1) = alpha_FLC;
 OP_am_object.States(2).x(1,1) = alpha_FLC;
+
 
 options = findopOptions;
 options.OptimizerType = 'graddescent';
@@ -66,8 +69,46 @@ G_am_reord = ss2ss(G_am, T_reorder);
 
 %% Analyze system stability
 
+
 iopzmap(G_am_reord)
 
+% Get the transfer function matrix
+Tf_G_am_reord = tf(G_am_reord);
+
+% Extract individual transfer functions
+Tf_G_am_reord1 = Tf_G_am_reord(1);
+Tf_G_am_reord2 = Tf_G_am_reord(2);
+
+% Get the damping information
+[wn, zeta, poles] = damp(G_am_reord);
+disp('Damping Ratios and Natural Frequencies:');
+disp(table(wn, zeta, poles));
+
+% Analyze Acceleration zeros
+disp('Zeros of acceleration:');
+disp(zero(Tf_G_am_reord1));
+
+% Analyze Pitch rate zeros
+disp('Zeros of pitch rate:');
+disp(zero(Tf_G_am_reord2));
+
+% Create directory if it does not exist
+outputDir = 'Figures';
+
+figure;
+step(G_m);
+title('Step Response of the Open Loop Missile Model');
+saveas(gcf, fullfile(outputDir, 'StepResponse_MissileModel.pdf'));
+
+figure;
+step(G_act);
+title('Step Response of the Open Loop Actuator Model');
+saveas(gcf, fullfile(outputDir, 'StepResponse_ActuatorModel.pdf'));
+
+figure;
+step(G_am_reord, 20);
+title('Step Response of the Open Loop Airframe Model');
+saveas(gcf, fullfile(outputDir, 'StepResponse_AirframeModel.pdf'));
 
 
 
