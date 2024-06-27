@@ -12,6 +12,7 @@ A_delta = 115.0529; %m/s^2*rad control acc derivative
 omega_a = 150; % rad/s actuator nat freq
 zeta_a = 0.7; % actuator damping ratio	 
 V = M*a; % m/s velocity at operating point
+alpha_FLC = 20 * (pi/180);
 
 %% Defining the A, B, C, D matrices for the short period model of the system as well as the state space model
 
@@ -44,6 +45,12 @@ save G_act
 sys_am = "Airframe";
 open_system(sys_am)
 OP_am_object = operspec(sys_am);
+
+% Set the operating point condition
+OP_am_object.States(2).Known(1,1) = 1;
+OP_am_object.States(2).SteadyState(1,1) = 1;
+OP_am_object.States(2).x(1,1) = alpha_FLC;
+
 options = findopOptions;
 options.OptimizerType = 'graddescent';
 options.DisplayReport = 'on';
@@ -56,6 +63,10 @@ T_reorder = [0,0,1,0;
              1,0,0,0;
              0,1,0,0];
 G_am_reord = ss2ss(G_am, T_reorder);
+
+%% Analyze system stability
+
+iopzmap(G_am_reord)
 
 
 
