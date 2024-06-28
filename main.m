@@ -69,9 +69,6 @@ G_am_reord = ss2ss(G_am, T_reorder);
 
 %% Analyze system stability
 
-
-iopzmap(G_am_reord)
-
 % Get the transfer function matrix
 Tf_G_am_reord = tf(G_am_reord);
 
@@ -109,6 +106,12 @@ figure;
 step(G_am_reord, 20);
 title('Step Response of the Open Loop Airframe Model');
 saveas(gcf, fullfile(outputDir, 'StepResponse_AirframeModel.pdf'));
+
+figure;
+iopzmap(G_am_reord);
+saveas(gcf, fullfile(outputDir, 'ioPZMap_AirframeModel.pdf'));
+
+
 
 
 
