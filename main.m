@@ -70,11 +70,11 @@ G_am_reord = ss2ss(G_am, T_reorder);
 %% Analyze system stability
 
 % Get the transfer function matrix
-Tf_G_am_reord = tf(G_am_reord);
+tf_G_am = tf(G_am_reord);
 
 % Extract individual transfer functions
-Tf_G_am_reord1 = Tf_G_am_reord(1);
-Tf_G_am_reord2 = Tf_G_am_reord(2);
+G_ol_nz = tf_G_am(1);
+G_ol_q = tf_G_am(2);
 
 % Get the damping information
 [wn, zeta, poles] = damp(G_am_reord);
@@ -83,36 +83,92 @@ disp(table(wn, zeta, poles));
 
 % Analyze Acceleration zeros
 disp('Zeros of acceleration:');
-disp(zero(Tf_G_am_reord1));
+disp(zero(G_ol_nz));
 
 % Analyze Pitch rate zeros
 disp('Zeros of pitch rate:');
-disp(zero(Tf_G_am_reord2));
+disp(zero(G_ol_q));
 
 % Create directory if it does not exist
 outputDir = 'Figures';
 
-figure;
-step(G_m);
-title('Step Response of the Open Loop Missile Model');
-saveas(gcf, fullfile(outputDir, 'StepResponse_MissileModel.pdf'));
+% figure;
+% step(G_m);
+% title('Step Response of the Open Loop Missile Model');
+% saveas(gcf, fullfile(outputDir, 'StepResponse_MissileModel.pdf'));
+
+% figure;
+% step(G_act);
+% title('Step Response of the Open Loop Actuator Model');
+% saveas(gcf, fullfile(outputDir, 'StepResponse_ActuatorModel.pdf'));
+
+% figure;
+% step(G_am_reord, 20);
+% title('Step Response of the Open Loop Airframe Model');
+% saveas(gcf, fullfile(outputDir, 'StepResponse_AirframeModel.pdf'));
+
+% figure;
+% iopzmap(G_am_reord);
+% saveas(gcf, fullfile(outputDir, 'ioPZMap_AirframeModel.pdf'));
+
+%% Loop Shaping
+
+% Damping Gain Design
+
+% figure;
+% rlocusplot(G_ol_q);
+
+C_q = -0.163;
+% C_q = -0.024;
+sys_cq = 'ClosedLoop_Cq';
+% Open the Simulink model
+open_system(sys_cq);
+
+% Update the Gain block with the value from the workspace
+% set_param('ClosedLoop_Cq','Gain','C_q');
+% sim("ClosedLoop_Cq.slx");
+
+
+% % Define the I/O points for linearization
+% io_cq(1) = linio('ClosedLoop_Cq/u_unsc', 1, 'input');  % Input at u_unsc
+% io_cq(2) = linio('ClosedLoop_Cq/y_1', 1, 'output');    % Output at y1
+
+% Linearize the model
+G_cl_q_trial = linearize(sys_cq);
+G_cl_q_unsc = G_cl_q_trial(1,1);
+% Display the closed-loop transfer function in zpk form
+disp('Closed-Loop Transfer Function G_cl_q_unsc:');
+zpk_G_cl_q_unsc = zpk(G_cl_q_unsc);
+disp(zpk_G_cl_q_unsc);
+
+% Display the open-loop transfer function in zpk form
+disp('Open-Loop Transfer Function G_am(1,1):');
+zpk_G_ol_nz = zpk(G_ol_nz);
+disp(zpk_G_ol_nz);
 
 figure;
-step(G_act);
-title('Step Response of the Open Loop Actuator Model');
-saveas(gcf, fullfile(outputDir, 'StepResponse_ActuatorModel.pdf'));
+iopzmap(G_cl_q_trial, G_am_reord)
+saveas(gcf, fullfile(outputDir, 'ioPZMap_ClosedLoop_Cq.pdf'));
 
 figure;
-step(G_am_reord, 20);
-title('Step Response of the Open Loop Airframe Model');
-saveas(gcf, fullfile(outputDir, 'StepResponse_AirframeModel.pdf'));
+step(G_cl_q_trial);
 
 figure;
-iopzmap(G_am_reord);
-saveas(gcf, fullfile(outputDir, 'ioPZMap_AirframeModel.pdf'));
+step(G_ol_nz);
 
+% Scaling gain Design
 
+k_sc = dcgain(G_cl_q_unsc);
 
+C_sc = 1/k_sc;
 
+sys_cqcs = 'ClosedLoop_CqCsc';
+open_system(sys_cqcs);
 
+G = linearize(sys_cqcs);
+zpk_G = zpk(G);
+step(G);
 
+% Integral Gain Design
+
+C_i = 1;
