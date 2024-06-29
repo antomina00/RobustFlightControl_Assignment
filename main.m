@@ -74,7 +74,9 @@ tf_G_am = tf(G_am_reord);
 
 % Extract individual transfer functions
 G_ol_nz = tf_G_am(1);
+zpk_G_ol_nz_old = zpk(G_ol_nz);
 G_ol_q = tf_G_am(2);
+zpk_G_ol_q_old =  zpk(G_ol_q);
 
 % Get the damping information
 [wn, zeta, poles] = damp(G_am_reord);
@@ -137,24 +139,24 @@ open_system(sys_cq);
 G_cl_q_trial = linearize(sys_cq);
 G_cl_q_unsc = G_cl_q_trial(1,1);
 % Display the closed-loop transfer function in zpk form
-disp('Closed-Loop Transfer Function G_cl_q_unsc:');
-zpk_G_cl_q_unsc = zpk(G_cl_q_unsc);
-disp(zpk_G_cl_q_unsc);
+% disp('Closed-Loop Transfer Function G_cl_q_unsc:');
+% zpk_G_cl_q_unsc = zpk(G_cl_q_unsc);
+% disp(zpk_G_cl_q_unsc);
 
 % Display the open-loop transfer function in zpk form
-disp('Open-Loop Transfer Function G_am(1,1):');
-zpk_G_ol_nz = zpk(G_ol_nz);
-disp(zpk_G_ol_nz);
+% disp('Open-Loop Transfer Function G_am(1,1):');
+% zpk_G_ol_nz = zpk(G_ol_nz);
+% disp(zpk_G_ol_nz);
 
-figure;
-iopzmap(G_cl_q_trial, G_am_reord)
-saveas(gcf, fullfile(outputDir, 'ioPZMap_ClosedLoop_Cq.pdf'));
+% figure;
+% iopzmap(G_cl_q_trial, G_am_reord)
+% saveas(gcf, fullfile(outputDir, 'ioPZMap_ClosedLoop_Cq.pdf'));
 
-figure;
-step(G_cl_q_trial);
+% figure;
+% step(G_cl_q_trial);
 
-figure;
-step(G_ol_nz);
+% figure;
+% step(G_ol_nz);
 
 % Scaling gain Design
 
@@ -167,8 +169,25 @@ open_system(sys_cqcs);
 
 G = linearize(sys_cqcs);
 zpk_G = zpk(G);
-step(G);
+
+% figure;
+% step(G);
 
 % Integral Gain Design
 
-C_i = 1;
+C_i = 5.48;
+
+sys_cqcsci = 'ClosedLoop_CqCscCi';
+open_system(sys_cqcsci);
+
+G_CqCscCi = linearize(sys_cqcsci);
+G_ol_nz_23 = G_CqCscCi(1,1);
+
+zpk_G_ol_nz_23 = zpk(G_ol_nz_23);
+
+% sisotool(zpk_G_ol_nz_23);
+
+s = tf('s');
+T = feedback(G_ol_nz_23 * C_i/s, 1, -1);
+zpk_T = zpk(T);
+
