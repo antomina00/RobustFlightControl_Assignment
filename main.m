@@ -118,7 +118,7 @@ outputDir = 'Figures';
 % Damping Gain Design
 
 % figure;
-% rlocusplot(G_ol_q);
+% rlocusplot(-G_ol_q);
 
 C_q = -0.163;
 % C_q = -0.024;
@@ -172,22 +172,24 @@ zpk_G = zpk(G);
 
 % figure;
 % step(G);
+% saveas(gcf, fullfile(outputDir, 'Step_Response_G_22.pdf'));
 
 % Integral Gain Design
 
-C_i = 5.48;
+C_i = 5.8;%5.48
 
 sys_cqcsci = 'ClosedLoop_CqCscCi';
 open_system(sys_cqcsci);
 
 G_CqCscCi = linearize(sys_cqcsci);
 G_ol_nz_23 = G_CqCscCi(1,1);
-
 zpk_G_ol_nz_23 = zpk(G_ol_nz_23);
+% sisotool(-G_ol_nz_23);
 
-% sisotool(zpk_G_ol_nz_23);
-
-s = tf('s');
-T = feedback(G_ol_nz_23 * C_i/s, 1, -1);
+T_full = linearize(sys_cqcsci);
+T = T_full(1,1);
+step(T,[1,10]);
 zpk_T = zpk(T);
+saveas(gcf, fullfile(outputDir, 'Step_Response_T_23.pdf'));
 
+%% Mixed Sensitivity
