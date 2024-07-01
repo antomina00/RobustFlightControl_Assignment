@@ -136,8 +136,8 @@ open_system(sys_cq);
 % io_cq(2) = linio('ClosedLoop_Cq/y_1', 1, 'output');    % Output at y1
 
 % Linearize the model
-G_cl_q_trial = linearize(sys_cq);
-G_cl_q_unsc = G_cl_q_trial(1,1);
+G_cl_q = linearize(sys_cq);
+G_cl_q_unsc = G_cl_q(1,1);
 % Display the closed-loop transfer function in zpk form
 % disp('Closed-Loop Transfer Function G_cl_q_unsc:');
 % zpk_G_cl_q_unsc = zpk(G_cl_q_unsc);
@@ -149,9 +149,10 @@ G_cl_q_unsc = G_cl_q_trial(1,1);
 % disp(zpk_G_ol_nz);
 
 % figure;
-% iopzmap(G_cl_q_trial, G_am_reord)
+% iopzmap(G_cl_q_unsc, G_ol_nz)
 % saveas(gcf, fullfile(outputDir, 'ioPZMap_ClosedLoop_Cq.pdf'));
 
+iopzmap(G_cl_q_unsc);
 % figure;
 % step(G_cl_q_trial);
 
@@ -176,7 +177,7 @@ zpk_G = zpk(G);
 
 % Integral Gain Design
 
-C_i = 5.8;%5.48
+C_i = 5.48;%5.48
 
 sys_cqcsci = 'ClosedLoop_CqCscCi';
 open_system(sys_cqcsci);
@@ -184,12 +185,37 @@ open_system(sys_cqcsci);
 G_CqCscCi = linearize(sys_cqcsci);
 G_ol_nz_23 = G_CqCscCi(1,1);
 zpk_G_ol_nz_23 = zpk(G_ol_nz_23);
-% sisotool(-G_ol_nz_23);
+% sisotool(G_ol_nz_23);
 
 T_full = linearize(sys_cqcsci);
 T = T_full(1,1);
-step(T,[1,10]);
+% step(T,[1,10]);
 zpk_T = zpk(T);
-saveas(gcf, fullfile(outputDir, 'Step_Response_T_23.pdf'));
+% saveas(gcf, fullfile(outputDir, 'Step_Response_T_23.pdf'));
 
 %% Mixed Sensitivity
+
+% Part #3A - Weighting Filters
+
+M_s_min = 0.5 * (1/sin(15*(pi/180))); %1.93
+
+dcgain_w1_dB = -60;
+hfgain_w1 = M_s_min;
+mag_w1_dB =-3.01;
+freq_w1 = 4 ;
+
+% Convert dB gains to absolute gains
+dcgain_w1_abs = 10^(dcgain_w1_dB / 20);
+mag_w1_abs = 10^(mag_w1_dB / 20);
+
+W1 = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1);
+
+figure;
+sigma(W1,G,1);
+% bodemag(W1); 
+
+
+% dcgain_w2 = 0;
+% hfgain_w2 = M_s_min;zpk(
+
+
