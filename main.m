@@ -199,23 +199,44 @@ zpk_T = zpk(T);
 
 M_s_min = 0.5 * (1/sin(15*(pi/180))); %1.93
 
-dcgain_w1_dB = -60;
-hfgain_w1 = M_s_min;
-mag_w1_dB =-3.01;
-freq_w1 = 4 ;
+dcgain_w1_dB = 60;
+hfgain_w1_db = -M_s_min;
+mag_w1_dB = 3.01;
+freq_w1 = 4;
 
 % Convert dB gains to absolute gains
-dcgain_w1_abs = 10^(dcgain_w1_dB / 20);
-mag_w1_abs = 10^(mag_w1_dB / 20);
+dcgain_w1_abs = db2mag(dcgain_w1_dB);
+mag_w1_abs = db2mag(mag_w1_dB);
+hfgain_w1_abs = db2mag(hfgain_w1_db);
 
-W1 = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1);
+W1 = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_abs);
 
+% figure;
+% sigma(1/W1);
+
+
+dcgain_w2_dB = -100;
+hfgain_w2_dB = 40;
+mag_w2_dB = 15;
+freq_w2_db = 151;
+
+% Convert dB gains to abs gains
+hfgain_w2_abs = db2mag(hfgain_w2_dB);
+mag_w2_abs = db2mag(mag_w2_dB);
+% freq_w2_abs = 10^(freq_w2_db / 20);
+dcgain_w2_abs = db2mag(dcgain_w2_dB);
+
+W2 = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
+
+% figure;
+% bodemag(W2);
+% 
+W1_inv  = 1/W1;
+W2_inv = 1/W2;
 figure;
-sigma(W1,G,1);
-% bodemag(W1); 
+sigma(W1_inv, W2_inv);
 
-
-% dcgain_w2 = 0;
-% hfgain_w2 = M_s_min;zpk(
+% W1_trial = tf([1/dcgain_w1_abs, freq_w1] , [1, freq_w1 * M_s_min]);
+% sigma(1/W1_trial);
 
 
