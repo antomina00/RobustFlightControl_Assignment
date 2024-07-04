@@ -211,10 +211,26 @@ hfgain_w1_abs = db2mag(hfgain_w1_db);
 
 W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
 
-% Initialize values of makeweight for W2
-dcgain_w2_dB = -100;
-hfgain_w2_dB = 40;
-mag_w2_dB = 15;
+% % Initialize values of makeweight for W2
+% dcgain_w2_dB = -100;
+% hfgain_w2_dB = 40;
+% mag_w2_dB = 15;
+% freq_w2_db = 151;
+% 
+% % Convert dB gains to abs gains
+% hfgain_w2_abs = db2mag(hfgain_w2_dB);
+% mag_w2_abs = db2mag(mag_w2_dB);
+% dcgain_w2_abs = db2mag(dcgain_w2_dB);
+% 
+% W2 = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
+% W2_inv = 1/W2;
+
+% For now, assume W1 to be the same as W3
+W3_inv = W1_inv;
+
+dcgain_w2_dB = 100;
+hfgain_w2_dB = -40;
+mag_w2_dB = -15;
 freq_w2_db = 151;
 
 % Convert dB gains to abs gains
@@ -222,11 +238,7 @@ hfgain_w2_abs = db2mag(hfgain_w2_dB);
 mag_w2_abs = db2mag(mag_w2_dB);
 dcgain_w2_abs = db2mag(dcgain_w2_dB);
 
-W2 = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
-W2_inv = 1/W2;
-
-% For now, assume W1 to be the same as W3
-W3_inv = W1_inv;
+W2_inv = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 
 % For question 3C.1, first exercise, W3 != W1. Uncomment the following
 % lines:
@@ -246,8 +258,9 @@ W3_inv = W1_inv;
 
 % --------------------------------------------
 
-% Invert W1 and W3 filters to obtain the correct TF
+% Invert W1, W2 and W3 filters to obtain the correct TF
 W1  = 1/W1_inv;
+W2 = 1/W2_inv;
 W3 = 1/W3_inv;
 
 %Plot the singular value magnitude vs frequency of W1 and W1
