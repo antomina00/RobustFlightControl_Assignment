@@ -1,4 +1,4 @@
-%% Parameters of the system
+ %% Parameters of the system
 g = 9.80665; % m/s^2 gravity
 a = 316.0561; %m/s at operating point altitude 6096m
 M = 3; % Mach number at operating point
@@ -210,7 +210,7 @@ mag_w1_abs = db2mag(mag_w1_dB);
 hfgain_w1_abs = db2mag(hfgain_w1_db);
 
 W1 = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_abs);
-
+% W3 = W1;
 % figure;
 % sigma(1/W1);
 
@@ -228,15 +228,138 @@ dcgain_w2_abs = db2mag(dcgain_w2_dB);
 
 W2 = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 
+dcgain_w3_dB = -60;
+hfgain_w3_db = M_s_min;
+mag_w3_dB = -40;
+freq_w3 = 4;
+
+% Convert dB gains to absolute gains
+dcgain_w3_abs = db2mag(dcgain_w3_dB);
+mag_w3_abs = db2mag(mag_w3_dB);
+hfgain_w3_abs = db2mag(hfgain_w3_db);
+
+W3 = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
+
+% sigma(1/W3);
+
 % figure;
 % bodemag(W2);
 % 
 W1_inv  = 1/W1;
 W2_inv = 1/W2;
-figure;
-sigma(W1_inv, W2_inv);
+% figure;
+% sigma(W1_inv, W2_inv);
 
 % W1_trial = tf([1/dcgain_w1_abs, freq_w1] , [1, freq_w1 * M_s_min]);
 % sigma(1/W1_trial);
+
+% Part #3B - Reference Model Computation
+ts_d = 0.18;
+Md_d = 5; 
+
+objective = @(x) compute_step_error(x, ts_d, Md_d);
+
+initial_guess = [36.6394*0.5, 0.1];
+
+lb = [0,0];
+ub = [inf, 1];
+
+options = optimoptions('fmincon', 'Display', 'iter', 'Algorithm', 'sqp');
+
+% [optimal_params, fval] = fmincon(objective, initial_guess, [],[], [], [], lb, ub, [], options);
+
+% Extract optimal omega_d and zeta_d
+% % omega_d_opt = optimal_params(1);
+% % zeta_d_opt = optimal_params(2);
+
+omega_d_opt = 30;%22.6
+zeta_d_opt = 0.74;%0.79
+counter = 0;
+
+for i = 0:0.1:30
+    for j = 0.6:0.001:0.85
+        counter = counter;
+        fprintf('Iteration: %.4f\n', counter);
+        T_d = tf([(-i^2/36.6394), i^2], [1, 2*j*i, i^2]);
+        T_d_stepinfo = stepinfo(T_d);
+        if T_d_stepinfo.SettlingTime <=0.18 && T_d_stepinfo.Overshoot <=5
+            omega_d_trial = i;
+            fprintf('Optimal omega_d: %.4f\n', omega_d_trial);
+            zeta_d_trial = j;
+            fprintf('Optimal zeta_d: %.4f\n', zeta_d_trial);
+        else 
+            disp('No omega and zeta found')
+        end
+        counter = counter + 1;
+    end
+end
+
+
+% Display the results
+% fprintf('Optimal omega_d: %.4f\n', omega_d_opt);
+% fprintf('Optimal zeta_d: %.4f\n', zeta_d_opt);
+
+% Plot the step response of the optimized system
+T_d_opt = tf([(-omega_d_opt^2/36.6394), omega_d_opt^2], [1, 2*zeta_d_opt*omega_d_opt, omega_d_opt^2]);
+% step(T_d_opt);
+% grid on;
+% title('Step Response of the Optimized Reference Model');
+figure;
+step(T_d_opt);
+zpk_T = zpk(T_d_opt);
+
+%Part 3C: Controller Design
+
+sys_3c1 = "Design";
+open_system(sys_3c1);
+
+P = linearize(sys_3c1);
+zpk_P = zpk(P);
+rel_tol = 1*10^-6;
+
+opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
+[C_e, CL_Tzw, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
+
+S_o = (1 + G* C_e)^-1;
+T_o = G*C_e*S_o;
+
+T_wz_theory = [W1*S_o; W2*C_e*S_o; W3*(T_d_opt - T_o)];
+
+p_options = sigmaoptions;
+
+p_options.MagUnits = 'abs';
+p_options.FreqScale = 'log';
+p_options.Grid = 'on';
+p_options.FreqUnits = 'rad/s';
+% p_options.XLimMode = 'manual';
+% p_options.XLim = {[0.1, 10^8]};
+
+% figure;
+% sigmaplot(CL_Tzw, p_options);
+% hold on;
+% sigmaplot(CL_Tzw(1), p_options);
+% hold on;
+% sigmaplot(CL_Tzw(2), p_options);
+% hold on;
+% sigmaplot(CL_Tzw(3), p_options);
+% hold off;
+% legend('T_wz', 'T_wz1', 'T_wz2', 'T_wz3');
+% 
+
+
+function error = compute_step_error(params, ts_d, Md_d)
+    omega_d = params(1);
+    zeta_d = params(2);
+
+    T_d = tf([(-omega_d^2/36.6394), omega_d^2] , [1, 2*zeta_d*omega_d, omega_d^2]);
+
+    Td_info = stepinfo(T_d);
+
+    ts_error = 0.5*(Td_info.SettlingTime - ts_d)^2;
+    Md_error = 0.5*(Td_info.Overshoot - Md_d)^2;
+
+    error = ts_error + Md_error;
+
+end
 
 
