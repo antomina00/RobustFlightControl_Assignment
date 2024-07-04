@@ -199,9 +199,9 @@ zpk_T = zpk(T);
 
 M_s_min = 0.5 * (1/sin(15*(pi/180))); %1.93
 
-dcgain_w1_dB = 60;
-hfgain_w1_db = -M_s_min;
-mag_w1_dB = 3.01;
+dcgain_w1_dB = -60;
+hfgain_w1_db = M_s_min;
+mag_w1_dB = -3.01;
 freq_w1 = 4;
 
 % Convert dB gains to absolute gains
@@ -209,7 +209,7 @@ dcgain_w1_abs = db2mag(dcgain_w1_dB);
 mag_w1_abs = db2mag(mag_w1_dB);
 hfgain_w1_abs = db2mag(hfgain_w1_db);
 
-W1 = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_abs);
+W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
 % W3 = W1;
 % figure;
 % sigma(1/W1);
@@ -230,7 +230,7 @@ W2 = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
-mag_w3_dB = -40;
+mag_w3_dB = -16.2;
 freq_w3 = 4;
 
 % Convert dB gains to absolute gains
@@ -238,17 +238,21 @@ dcgain_w3_abs = db2mag(dcgain_w3_dB);
 mag_w3_abs = db2mag(mag_w3_dB);
 hfgain_w3_abs = db2mag(hfgain_w3_db);
 
-W3 = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
+W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
 
-% sigma(1/W3);
+W3 = 1/W3_inv;
+
+figure;
+sigma(1/W3);
 
 % figure;
 % bodemag(W2);
 % 
-W1_inv  = 1/W1;
+W1  = 1/W1_inv;
 W2_inv = 1/W2;
+
 % figure;
-% sigma(W1_inv, W2_inv);
+%sigma(1/W1);
 
 % W1_trial = tf([1/dcgain_w1_abs, freq_w1] , [1, freq_w1 * M_s_min]);
 % sigma(1/W1_trial);
@@ -272,27 +276,27 @@ options = optimoptions('fmincon', 'Display', 'iter', 'Algorithm', 'sqp');
 % % omega_d_opt = optimal_params(1);
 % % zeta_d_opt = optimal_params(2);
 
-omega_d_opt = 30;%22.6
-zeta_d_opt = 0.74;%0.79
+omega_d_opt = 22.6;%22.6 %37.4518
+zeta_d_opt = 0.79;%0.79 %0.716
 counter = 0;
 
-for i = 0:0.1:30
-    for j = 0.6:0.001:0.85
-        counter = counter;
-        fprintf('Iteration: %.4f\n', counter);
-        T_d = tf([(-i^2/36.6394), i^2], [1, 2*j*i, i^2]);
-        T_d_stepinfo = stepinfo(T_d);
-        if T_d_stepinfo.SettlingTime <=0.18 && T_d_stepinfo.Overshoot <=5
-            omega_d_trial = i;
-            fprintf('Optimal omega_d: %.4f\n', omega_d_trial);
-            zeta_d_trial = j;
-            fprintf('Optimal zeta_d: %.4f\n', zeta_d_trial);
-        else 
-            disp('No omega and zeta found')
-        end
-        counter = counter + 1;
-    end
-end
+% for i = 0:0.1:30
+%     for j = 0.6:0.001:0.85
+%         counter = counter;
+%         fprintf('Iteration: %.4f\n', counter);
+%         T_d = tf([(-i^2/36.6394), i^2], [1, 2*j*i, i^2]);
+%         T_d_stepinfo = stepinfo(T_d);
+%         if T_d_stepinfo.SettlingTime <=0.18 && T_d_stepinfo.Overshoot <=5
+%             omega_d_trial = i;
+%             fprintf('Optimal omega_d: %.4f\n', omega_d_trial);
+%             zeta_d_trial = j;
+%             fprintf('Optimal zeta_d: %.4f\n', zeta_d_trial);
+%         else 
+%             disp('No omega and zeta found')
+%         end
+%         counter = counter + 1;
+%     end
+% end
 
 
 % Display the results
@@ -333,6 +337,10 @@ p_options.Grid = 'on';
 p_options.FreqUnits = 'rad/s';
 % p_options.XLimMode = 'manual';
 % p_options.XLim = {[0.1, 10^8]};
+
+disp(norm(CL_Tzw(1), 'Inf'));
+disp(norm(CL_Tzw(2), 'Inf'));
+disp(norm(CL_Tzw(3), 'Inf'));
 
 % figure;
 % sigmaplot(CL_Tzw, p_options);
