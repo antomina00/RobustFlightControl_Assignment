@@ -302,12 +302,12 @@ zpk_P = zpk(P);
 
 rel_tol = 1*10^-6;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
-[C_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
+[C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
 % Verifying Hinf synthesis matches the theory
-S_o = (1 + G* C_e)^-1;
-T_o = G*C_e*S_o;
-T_wz_theory = [W1*S_o; W2*C_e*S_o; W3*(T_d_opt - T_o)];
+S_o = (1 + G* C0_e)^-1;
+T_o = G*C0_e*S_o;
+T_wz_theory = [W1*S_o; W2*C0_e*S_o; W3*(T_d_opt - T_o)];
 
 % Defining options for the sigmaplot
 p_options = sigmaoptions;
@@ -335,6 +335,50 @@ sigmaplot(CL_Twz(3), p_options);
 hold off;
 legend('T_wz', 'T_wz1', 'T_wz2', 'T_wz3');
 
+% Part 3.C2:  Controller order reduction
+
+%Calculating the zpk form, the poles and zeros of initial C0_e obtaied from Part 3C.1
+zpk_C0_e = zpk(C0_e);
+[wn_C0_e, zeta_C0_e, poles_C0_e] = damp(zpk_C0_e);
+zeros_C0_e = zero(zpk_C0_e);
+nat_freq_zeros_C0_e = sqrt(real(zeros_C0_e).^2 + imag(zeros_C0_e).^2);
+
+%Displaying the poles and zeros of initial C0_e obtaied from Part 3C.1
+disp("These are the poles of C0_e:");
+disp(table(wn_C0_e, zeta_C0_e, poles_C0_e, 'VariableNames', {'NaturalFrequency', 'Damping Ratio', 'Poles'}));
+
+disp("These are the zeros of C0_e:");
+disp(table(zeros_C0_e, nat_freq_zeros_C0_e, 'VariableNames', {'Zeros', 'Natural Frequency'}));
+
+% Obtaining relevant gains associated with the wanted poles and zeros so as
+% to obtain Ce_min (relevant poles: 3-8, relevant zeros: 2-7)
+
+selected_zeros_C0_e = Z_C0_e(2:7);
+selected_poles_C0_e = P_C0_e(3:8);
+
+[Z_C0_e, P_C0_e, K_PZ_C0_e] = zpkdata(C0_e, 'v');
+
+% Calculating the gain adjustement due to very HF pole and zero
+hf_pole_C0_e = P_C0_e(end);
+hf_zero_C0_e = Z_C0_e(1);
+gain_adjustment_C0_e = abs(hf_zero_C0_e/ hf_pole_C0_e);
+
+% Applying adjustement to gain found from zpkdata
+K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e;
+
+%Creating minimized transfer function C_e_min, displaying it and comparing
+%it to how it was previously
+
+C_e_min = zpk(selected_zeros_C0_e, selected_poles_C0_e, K_C0_e_min);
+
+disp('The minimized transfer function C_e_min:');
+disp(C_e_min);
+
+figure;
+bode(C0_e, 'r', C_e_min, 'b--');
+legend('Original C0_e', 'Minimized C_e_{min}');
+grid on;
+title('Bode Plot Comparison of C0_e and C_e_{min}');
 
 
 % Function used for fmincon in question 3B.1
