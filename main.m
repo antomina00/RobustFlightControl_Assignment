@@ -152,9 +152,7 @@ G_cl_q_unsc = G_cl_q(1,1);
 % iopzmap(G_cl_q_unsc, G_ol_nz)
 % saveas(gcf, fullfile(outputDir, 'ioPZMap_ClosedLoop_Cq.pdf'));
 
-iopzmap(G_cl_q_unsc);
-% figure;
-% step(G_cl_q_trial);
+%iopzmap(G_cl_q_unsc);
 
 % figure;
 % step(G_ol_nz);
@@ -197,8 +195,10 @@ zpk_T = zpk(T);
 
 % Part #3A - Weighting Filters
 
+% Getting the peak response of W1
 M_s_min = 0.5 * (1/sin(15*(pi/180))); %1.93
 
+% Initialize values of makeweight for W1
 dcgain_w1_dB = -60;
 hfgain_w1_db = M_s_min;
 mag_w1_dB = -3.01;
@@ -210,11 +210,8 @@ mag_w1_abs = db2mag(mag_w1_dB);
 hfgain_w1_abs = db2mag(hfgain_w1_db);
 
 W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
-% W3 = W1;
-% figure;
-% sigma(1/W1);
 
-
+% Initialize values of makeweight for W2
 dcgain_w2_dB = -100;
 hfgain_w2_dB = 40;
 mag_w2_dB = 15;
@@ -223,10 +220,17 @@ freq_w2_db = 151;
 % Convert dB gains to abs gains
 hfgain_w2_abs = db2mag(hfgain_w2_dB);
 mag_w2_abs = db2mag(mag_w2_dB);
-% freq_w2_abs = 10^(freq_w2_db / 20);
 dcgain_w2_abs = db2mag(dcgain_w2_dB);
 
 W2 = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
+W2_inv = 1/W2;
+
+% For now, assume W1 to be the same as W3
+%W3_inv = W1_inv;
+
+% For question 3C1, first exercise, W3 != W1. Uncomment the following
+% lines:
+% --------------------------------------------
 
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
@@ -240,22 +244,16 @@ hfgain_w3_abs = db2mag(hfgain_w3_db);
 
 W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
 
+% --------------------------------------------
+
+% Invert W1 and W3 filters to obtain the correct TF
+W1  = 1/W1_inv;
 W3 = 1/W3_inv;
 
+%Plot the singular value magnitude vs frequency of W1 and W1
 figure;
-sigma(1/W3);
+sigma(W2_inv, W1_inv);
 
-% figure;
-% bodemag(W2);
-% 
-W1  = 1/W1_inv;
-W2_inv = 1/W2;
-
-% figure;
-%sigma(1/W1);
-
-% W1_trial = tf([1/dcgain_w1_abs, freq_w1] , [1, freq_w1 * M_s_min]);
-% sigma(1/W1_trial);
 
 % Part #3B - Reference Model Computation
 ts_d = 0.18;
