@@ -211,7 +211,7 @@ hfgain_w1_abs = db2mag(hfgain_w1_db);
 
 W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
 
-W3_inv = W1_inv;
+% W3_inv = W1_inv;
 
 % Initialize values of makeweight for the inverse of W2
 dcgain_w2_dB = 100;
@@ -230,17 +230,17 @@ W2_inv = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 % lines:
 % --------------------------------------------
 
-% dcgain_w3_dB = -60;
-% hfgain_w3_db = M_s_min;
-% mag_w3_dB = -16.2;
-% freq_w3 = 4;
-% 
-% % Convert dB gains to absolute gains
-% dcgain_w3_abs = db2mag(dcgain_w3_dB);
-% mag_w3_abs = db2mag(mag_w3_dB);
-% hfgain_w3_abs = db2mag(hfgain_w3_db);
-% 
-% W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
+dcgain_w3_dB = -60;
+hfgain_w3_db = M_s_min;
+mag_w3_dB = -16.2;
+freq_w3 = 4;
+
+% Convert dB gains to absolute gains
+dcgain_w3_abs = db2mag(dcgain_w3_dB);
+mag_w3_abs = db2mag(mag_w3_dB);
+hfgain_w3_abs = db2mag(hfgain_w3_db);
+
+W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
 
 % --------------------------------------------
 
@@ -300,7 +300,7 @@ open_system(sys_3c1);
 P = linearize(sys_3c1);
 zpk_P = zpk(P);
 
-rel_tol = 1*10^-6;
+rel_tol = 1*10^-5;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
 [C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
@@ -351,35 +351,49 @@ disp("These are the zeros of C0_e:");
 disp(table(zeros_C0_e, nat_freq_zeros_C0_e, 'VariableNames', {'Zeros', 'Natural Frequency'}));
 
 % Obtaining relevant gains associated with the wanted poles and zeros so as
-% to obtain Ce_min (relevant poles: 3-8, relevant zeros: 2-7)
-
-selected_zeros_C0_e = Z_C0_e(2:7);
-selected_poles_C0_e = P_C0_e(3:8);
-
+% to obtain Ce_min (relevant poles: 1-7/9, relevant zeros: 1-5/7)
 [Z_C0_e, P_C0_e, K_PZ_C0_e] = zpkdata(C0_e, 'v');
 
-% Calculating the gain adjustement due to very HF pole and zero
-hf_pole_C0_e = P_C0_e(end);
-hf_zero_C0_e = Z_C0_e(1);
-gain_adjustment_C0_e = abs(hf_zero_C0_e/ hf_pole_C0_e);
+selected_zeros_C0_e = [zeros_C0_e(1); zeros_C0_e(4:8)];
+selected_poles_C0_e = [poles_C0_e(1:6); poles_C0_e(9)];
 
-% Applying adjustement to gain found from zpkdata
-K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e;
-
-%Creating minimized transfer function C_e_min, displaying it and comparing
-%it to how it was previously
-
+% % Calculating the gain adjustement due to very HF pole and zero
+hf_pole_C0_e = poles_C0_e(7:8);
+hf_zero_C0_e = zeros_C0_e(2:3);
+gain_adjustment_C0_e_1 = abs(hf_zero_C0_e(1));
+gain_adjustment_C0_e_2 = abs(hf_zero_C0_e(2));
+gain_adjustment_C0_e_3 = 1/abs(hf_pole_C0_e(1));
+gain_adjustment_C0_e_4 = 1/abs(hf_pole_C0_e(2));
+% 
+% % Applying adjustement to gain found from zpkdata
+K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e_1*gain_adjustment_C0_e_2*gain_adjustment_C0_e_3*gain_adjustment_C0_e_4;
+% 
+% %Creating minimized transfer function C_e_min, displaying it and comparing
+% %it to how it was previously
+% 
 C_e_min = zpk(selected_zeros_C0_e, selected_poles_C0_e, K_C0_e_min);
-
+% 
 disp('The minimized transfer function C_e_min:');
 disp(C_e_min);
-
+% 
 figure;
-bode(C0_e, 'r', C_e_min, 'b--');
+bode(C0_e, 'r', C_e_min, 'b');
 legend('Original C0_e', 'Minimized C_e_{min}');
 grid on;
 title('Bode Plot Comparison of C0_e and C_e_{min}');
 
+% Obtaining C_i_min by removing the remaning LF pole 0.005264
+selected_poles_C_i_min = [poles_C0_e(2:6); poles_C0_e(9)];
+C_i_min = zpk(selected_zeros_C0_e, selected_poles_C_i_min, K_C0_e_min);
+
+% Perform model reduction, specifying the oder of the reduced model
+Ci_red = balred(C_i_min,2); 
+
+% Compare Bode plots for the original and reduced transfer functions
+figure;
+bode(C_i_min, Ci_red);
+legend('Original Ci_min', 'Reduced Ci_red');
+title('Bode Plot Comparison');
 
 % Function used for fmincon in question 3B.1
 % function error = compute_step_error(params, ts_d, Md_d)
