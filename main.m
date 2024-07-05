@@ -300,7 +300,7 @@ open_system(sys_3c1);
 P = linearize(sys_3c1);
 zpk_P = zpk(P);
 
-rel_tol = 1*10^-6;
+rel_tol = 1*10^-2;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
 [C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
@@ -354,12 +354,12 @@ disp(table(zeros_C0_e, nat_freq_zeros_C0_e, 'VariableNames', {'Zeros', 'Natural 
 % to obtain Ce_min 
 [Z_C0_e, P_C0_e, K_PZ_C0_e] = zpkdata(C0_e, 'v');
 
-selected_zeros_C0_e = [zeros_C0_e(1); zeros_C0_e(4:8) ]; %  zeros_C0_e(3:8)
+selected_zeros_C0_e = [zeros_C0_e(3:8)]; % %zeros_C0_e(1); zeros_C0_e(3:8)
 selected_poles_C0_e = [poles_C0_e(1:6); poles_C0_e(9)]; % poles_C0_e(9)
 
 % % Calculating the gain adjustement due to very HF pole and zero
 hf_pole_C0_e = poles_C0_e(7:8);
-hf_zero_C0_e = zeros_C0_e(2:3); %2:3 1:2
+hf_zero_C0_e = zeros_C0_e(1:2); %2:3 1:2
 gain_adjustment_C0_e_1 = abs(hf_zero_C0_e(1));
 gain_adjustment_C0_e_2 = abs(hf_zero_C0_e(2));
 gain_adjustment_C0_e_3 = 1/abs(hf_pole_C0_e(1));
@@ -409,18 +409,18 @@ phase_peak_Ci_red = max(phase_C_i_red);
 % Part 3C.2: Controller Analysis and simulation
 F_f = 1;
 
-sys_3c2 = 'ClosedLoop_Test';
-open_system(sys_3c2);
-T_3c2 = linearize(sys_3c2);
+sys_3c3_CL = 'ClosedLoop_Test';
+open_system(sys_3c3_CL);
+T_3c3_CL = linearize(sys_3c3_CL);
 
-So_3c2 = T_3c2(1,1);
-CeSo_3c2 = T_3c2(2,1);
-To_3c2 = T_3c2(3,1);
-Tm_3c2 = T_3c2(4,1);
-T_r_udotm_3c2 = T_3c2(6,1);
-min_Ti_3c2 = T_3c2(2,2);
-SoG_3c2 = T_3c2(3,2);
-Si_3c2 = T_3c2(5,2);
+So_3c3_CL = T_3c3_CL(1,1);
+CeSo_3c3_CL = T_3c3_CL(2,1);
+To_3c3_CL = T_3c3_CL(3,1);
+Tm_3c3_CL = T_3c3_CL(4,1);
+T_r_udotm_3c3_CL = T_3c3_CL(6,1);
+min_Ti_3c3_CL = T_3c3_CL(2,2);
+SoG_3c3_CL = T_3c3_CL(3,2);
+Si_3c3_CL = T_3c3_CL(5,2);
 
 % Define the frequency range for singular value plot
 omega = logspace(-3, 3, 1000);
@@ -428,7 +428,7 @@ omega = logspace(-3, 3, 1000);
 % Plot the singular values
 figure;
 subplot(2, 3, 1);
-sigma(W1_inv ,'red', So_3c2, 'b', Si_3c2, 'g--', omega);
+sigma(W1_inv ,'red', So_3c3_CL, 'b', Si_3c3_CL, 'g--', omega);
 title('Singular Values of W1^{-1}, S_{o} and S_{i}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
@@ -436,7 +436,7 @@ legend('W^{-1}', 'S_{o}', 'S_{i}')
 grid on;
 
 subplot(2, 3, 2);
-sigma(W2_inv, 'r', CeSo_3c2, 'b', omega);
+sigma(W2_inv, 'r', CeSo_3c3_CL, 'b', omega);
 title('Singular Values of W2^{-1} and C_{e}S_{o}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
@@ -444,7 +444,7 @@ legend('W2^{-1}', 'C_{e}S_{0}')
 grid on;
 
 subplot(2, 3, 3);
-sigma(W3_inv, 'r', Tm_3c2, 'b', omega);
+sigma(W3_inv, 'r', Tm_3c3_CL, 'b', omega);
 title('Singular Values of W3^{-1} and T_{o}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
@@ -452,7 +452,7 @@ legend('W3^{-1}', 'T_{m}')
 grid on;
 
 subplot(2, 3, 4);
-sigma(-min_Ti_3c2, 'b', To_3c2, 'g--', omega);
+sigma(-min_Ti_3c3_CL, 'b', To_3c3_CL, 'g--', omega);
 title('Singular Values of T_{i} and T_{o}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
@@ -460,7 +460,7 @@ legend('T_{i}', 'T_{o}');
 grid on;
 
 subplot(2, 3, 5);
-sigma(SoG_3c2, 'b', omega);
+sigma(SoG_3c3_CL, 'b', omega);
 title('Singular Values of S_{o}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
@@ -473,6 +473,54 @@ title('Singular Values of C_{0_{e}} and C_{e_{red}}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
 legend('C_{0_{e}}', 'C_{e_{red}}')
+grid on;
+
+sys_3c3_OL = 'OpenLoop_Test';
+open_system(sys_3c3_OL);
+T_3c3_OL = linearize(sys_3c3_OL);
+
+% Getting the GM and PM of the open-loop system
+[Gm_3c3_OL,Pm_3c3_OL,Wcg_3c3_OL,Wcp_3c3_OL] = margin(T_3c3_OL);
+
+Dm_3c3_OL = (pi/180)*Pm_3c3_OL/Wcg_3c3_OL; %seconds
+
+figure;
+bode(T_3c3_OL);
+grid on
+title('Bode plot of the Open Loop system')
+
+%Third exercise of 3c3
+figure;
+subplot(2, 2, 1);
+step(So_3c3_CL ,'b');
+title('Step response of S_{o}');
+xlabel('Time[s]');
+ylabel('Magnitude');
+legend('S_{o}')
+grid on;
+
+subplot(2, 2, 2);
+step(T_d_opt ,'r', To_3c3_CL, 'b');
+title('Step response of T_{d} and T_{o}');
+xlabel('Time[s]');
+ylabel('Magnitude');
+legend('T_{d}','T_{o}')
+grid on;
+
+subplot(2, 2, 3);
+step(SoG_3c3_CL ,'b');
+title('Step response of S_{o}G');
+xlabel('Time[s]');
+ylabel('Magnitude');
+legend('S_{o}G')
+grid on;
+
+subplot(2, 2, 4);
+step((180/pi)*T_r_udotm_3c3_CL ,'b');
+title('Step response of T_{r_{\dot{u}_{m}}}');
+xlabel('Time[s]');
+ylabel('Magnitude');
+legend('T_{r_{\dot{u}_{m}}}')
 grid on;
 
 % Function used for fmincon in question 3B.1
