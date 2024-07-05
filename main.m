@@ -300,7 +300,7 @@ open_system(sys_3c1);
 P = linearize(sys_3c1);
 zpk_P = zpk(P);
 
-rel_tol = 1*10^-2;
+rel_tol = 1*10^-6;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
 [C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
@@ -354,12 +354,12 @@ disp(table(zeros_C0_e, nat_freq_zeros_C0_e, 'VariableNames', {'Zeros', 'Natural 
 % to obtain Ce_min 
 [Z_C0_e, P_C0_e, K_PZ_C0_e] = zpkdata(C0_e, 'v');
 
-selected_zeros_C0_e = [zeros_C0_e(3:8)]; % %zeros_C0_e(1); zeros_C0_e(3:8)
+selected_zeros_C0_e = [zeros_C0_e(1); zeros_C0_e(4:8)]; % %zeros_C0_e(1); zeros_C0_e(3:8)
 selected_poles_C0_e = [poles_C0_e(1:6); poles_C0_e(9)]; % poles_C0_e(9)
 
 % % Calculating the gain adjustement due to very HF pole and zero
 hf_pole_C0_e = poles_C0_e(7:8);
-hf_zero_C0_e = zeros_C0_e(1:2); %2:3 1:2
+hf_zero_C0_e = zeros_C0_e(2:3); %2:3 1:2
 gain_adjustment_C0_e_1 = abs(hf_zero_C0_e(1));
 gain_adjustment_C0_e_2 = abs(hf_zero_C0_e(2));
 gain_adjustment_C0_e_3 = 1/abs(hf_pole_C0_e(1));
@@ -368,7 +368,7 @@ gain_adjustment_C0_e_4 = 1/abs(hf_pole_C0_e(2));
 % gain_adjustment_C0_e_6 = abs(hf_zero_C0_e(3));
 
 % % Applying adjustement to gain found from zpkdata
-K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e_1*gain_adjustment_C0_e_2*gain_adjustment_C0_e_3*gain_adjustment_C0_e_4; %*gain_adjustment_C0_e_5* gain_adjustment_C0_e_6;
+K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e_1*gain_adjustment_C0_e_2*gain_adjustment_C0_e_3*gain_adjustment_C0_e_4;
 % 
 % %Creating minimized transfer function C_e_min, displaying it and comparing
 % %it to how it was previously
