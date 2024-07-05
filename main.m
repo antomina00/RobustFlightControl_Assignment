@@ -389,7 +389,7 @@ selected_poles_C_i_min = [poles_C0_e(2:6); poles_C0_e(9)];
 C_i_min = zpk(selected_zeros_C0_e, selected_poles_C_i_min, K_C0_e_min);
 
 % Perform model reduction, specifying the oder of the reduced model
-Ci_red = balred(minreal(C_i_min),2); 
+Ci_red = balred(C_i_min,3); 
 
 % Compare Bode plots for the original and reduced transfer functions
 figure;
@@ -495,7 +495,7 @@ subplot(2, 2, 1);
 step(So_3c3_CL ,'b');
 title('Step response of S_{o}');
 xlabel('Time[s]');
-ylabel('Magnitude');
+ylabel('Amplitude');
 legend('S_{o}')
 grid on;
 
@@ -503,7 +503,7 @@ subplot(2, 2, 2);
 step(T_d_opt ,'r', To_3c3_CL, 'b');
 title('Step response of T_{d} and T_{o}');
 xlabel('Time[s]');
-ylabel('Magnitude');
+ylabel('Amplitude');
 legend('T_{d}','T_{o}')
 grid on;
 
@@ -511,16 +511,16 @@ subplot(2, 2, 3);
 step(SoG_3c3_CL ,'b');
 title('Step response of S_{o}G');
 xlabel('Time[s]');
-ylabel('Magnitude');
+ylabel('Amplitude');
 legend('S_{o}G')
 grid on;
 
 subplot(2, 2, 4);
 step((180/pi)*T_r_udotm_3c3_CL ,'b');
-title('Step response of T_{r_{\dot{u}_{m}}}');
+title('Step response of T_{r_{udot_{m}}}');
 xlabel('Time[s]');
-ylabel('Magnitude');
-legend('T_{r_{\dot{u}_{m}}}')
+ylabel('Amplitude');
+legend('T_{r_{udot_{m}}}')
 grid on;
 
 % Function used for fmincon in question 3B.1
