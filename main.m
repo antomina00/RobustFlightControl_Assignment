@@ -300,7 +300,7 @@ open_system(sys_3c1);
 P = linearize(sys_3c1);
 zpk_P = zpk(P);
 
-rel_tol = 1*10^-5;
+rel_tol = 1*10^-2;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
 [C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
@@ -354,12 +354,12 @@ disp(table(zeros_C0_e, nat_freq_zeros_C0_e, 'VariableNames', {'Zeros', 'Natural 
 % to obtain Ce_min (relevant poles: 1-7/9, relevant zeros: 1-5/7)
 [Z_C0_e, P_C0_e, K_PZ_C0_e] = zpkdata(C0_e, 'v');
 
-selected_zeros_C0_e = [zeros_C0_e(1); zeros_C0_e(4:8)];
+selected_zeros_C0_e = [ zeros_C0_e(3:8)]; %zeros_C0_e(1);
 selected_poles_C0_e = [poles_C0_e(1:6); poles_C0_e(9)];
 
 % % Calculating the gain adjustement due to very HF pole and zero
 hf_pole_C0_e = poles_C0_e(7:8);
-hf_zero_C0_e = zeros_C0_e(2:3);
+hf_zero_C0_e = zeros_C0_e(1:2);
 gain_adjustment_C0_e_1 = abs(hf_zero_C0_e(1));
 gain_adjustment_C0_e_2 = abs(hf_zero_C0_e(2));
 gain_adjustment_C0_e_3 = 1/abs(hf_pole_C0_e(1));
@@ -377,8 +377,8 @@ disp('The minimized transfer function C_e_min:');
 disp(C_e_min);
 % 
 figure;
-bode(C0_e, 'r', C_e_min, 'b');
-legend('Original C0_e', 'Minimized C_e_{min}');
+bode(C0_e, 'r', C_e_min, 'b--');%  
+legend('Original C0_e', 'Minimized C_e_{min}');%
 grid on;
 title('Bode Plot Comparison of C0_e and C_e_{min}');
 
@@ -394,6 +394,16 @@ figure;
 bode(C_i_min, Ci_red);
 legend('Original Ci_min', 'Reduced Ci_red');
 title('Bode Plot Comparison');
+
+figure;
+pzmap(C_i_min, Ci_red);
+legend('C_{i_{min}}', 'C{i_{red}}');
+grid on;
+
+[mag_C_i_min, phase_C_i_min, wn_C_i_min] = bode(C_i_min);
+[mag_C_i_red, phase_C_i_red, wn_C_i_red] = bode(Ci_red);
+% Part 3C.2: Controller Analysis and simulation
+F_f = 1;
 
 % Function used for fmincon in question 3B.1
 % function error = compute_step_error(params, ts_d, Md_d)
