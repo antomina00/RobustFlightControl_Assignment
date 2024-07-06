@@ -278,23 +278,20 @@ sigma(W2_inv, W1_inv);
 % --------------------------------------
 
 % Reference model values obtained through trial and error
-omega_d_opt = 22.6;
-zeta_d_opt = 0.79;
-counter = 0;
+omega_d_opt = 18;
+zeta_d_opt = 0.7;
 
 % Plot the step response of the optimized system
 T_d_opt = tf([(-omega_d_opt^2/36.6394), omega_d_opt^2], [1, 2*zeta_d_opt*omega_d_opt, omega_d_opt^2]);
 
 figure;
-step(T_d_opt);
+stepinfo(T_d_opt, 'SettlingTimeThreshold', 0.05);
 grid on;
 title('Step Response of the Optimized Reference Model');
 zpk_T = zpk(T_d_opt);
 
 
 %Part 3C: Controller Design
-Results_hinfsyn = struct();
-
 
 sys_3c1 = "Design";
 open_system(sys_3c1);
@@ -306,14 +303,10 @@ rel_tol = 1*10^-6;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
 [C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
-
-
 % Verifying Hinf synthesis matches the theory
 S_o = (1 + G* C0_e)^-1;
 T_o = G*C0_e*S_o;
 T_wz_theory = [W1*S_o; W2*C0_e*S_o; W3*(T_d_opt - T_o)];
-
-
 
 % Defining options for the sigmaplot
 p_options = sigmaoptions;
@@ -341,7 +334,6 @@ sigmaplot(CL_Twz(3), p_options);
 hold off;
 legend('T_wz', 'T_wz1', 'T_wz2', 'T_wz3');
 
-
 % Part 3.C2:  Controller order reduction
 
 %Calculating the zpk form, the poles and zeros of initial C0_e obtaied from Part 3C.1
@@ -349,7 +341,6 @@ zpk_C0_e = zpk(C0_e);
 [wn_C0_e, zeta_C0_e, poles_C0_e] = damp(zpk_C0_e);
 zeros_C0_e = zero(zpk_C0_e);
 nat_freq_zeros_C0_e = sqrt(real(zeros_C0_e).^2 + imag(zeros_C0_e).^2);
-
 
 %Displaying the poles and zeros of initial C0_e obtaied from Part 3C.1
 disp("These are the poles of C0_e:");
@@ -377,13 +368,12 @@ gain_adjustment_C0_e_4 = 1/abs(hf_pole_C0_e(2));
 
 % % Applying adjustement to gain found from zpkdata
 K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e_1*gain_adjustment_C0_e_2*gain_adjustment_C0_e_3*gain_adjustment_C0_e_4;
-
+% 
 % %Creating minimized transfer function C_e_min, displaying it and comparing
 % %it to how it was previously
 % 
 C_e_min = zpk(selected_zeros_C0_e, selected_poles_C0_e, K_C0_e_min);
- 
-
+% 
 disp('The minimized transfer function C_e_min:');
 disp(C_e_min);
 % 
@@ -411,10 +401,17 @@ title('Bode Plot Comparison');
 phase_peak_C_i_min = max(phase_C_i_min);
 phase_peak_Ci_red = max(phase_C_i_red);
 
+%---------------------------------------------------
 % Part 3C.2: Controller Analysis and simulation
 F_f = 1;
 
 sys_3c3_CL = 'ClosedLoop_Test';
+load_system(sys_3c3_CL)
+
+%Make sure the value of the Ci_red is Ci_red
+block_path = [sys_3c3_CL, '/Ci_red'];
+set_param(block_path, 'sys', 'Ci_red');
+
 open_system(sys_3c3_CL);
 T_3c3_CL = linearize(sys_3c3_CL);
 
@@ -426,7 +423,6 @@ T_r_udotm_3c3_CL = T_3c3_CL(6,1);
 min_Ti_3c3_CL = T_3c3_CL(2,2);
 SoG_3c3_CL = T_3c3_CL(3,2);
 Si_3c3_CL = T_3c3_CL(5,2);
-
 
 % Define the frequency range for singular value plot
 omega = logspace(-3, 3, 1000);
@@ -482,6 +478,11 @@ legend('C_{0_{e}}', 'C_{e_{red}}')
 grid on;
 
 sys_3c3_OL = 'OpenLoop_Test';
+
+load_system(sys_3c3_OL);
+block_path = [sys_3d2_OL, '/Ci_red'];
+set_param(block_path, 'sys', 'Ci_red');
+
 open_system(sys_3c3_OL);
 T_3c3_OL = linearize(sys_3c3_OL);
 
@@ -489,7 +490,6 @@ T_3c3_OL = linearize(sys_3c3_OL);
 [Gm_3c3_OL,Pm_3c3_OL,Wcg_3c3_OL,Wcp_3c3_OL] = margin(T_3c3_OL);
 
 Dm_3c3_OL = (pi/180)*Pm_3c3_OL/Wcg_3c3_OL; %seconds
-
 
 figure;
 bode(T_3c3_OL);
@@ -527,7 +527,7 @@ step((180/pi)*T_r_udotm_3c3_CL ,'b');
 title('Step response of T_{r_{udot_{m}}}');
 xlabel('Time[s]');
 ylabel('Amplitude');
-legend('T_{r_{udot_{m}}}')
+legend('T_{rudotm}');
 grid on;
 
 %---------------------------------------------------------
@@ -600,8 +600,6 @@ Results_hinfsyn.Dm_3c3_OL = Dm_3c3_OL;
 %---------------------------------------------------------
 %% Feedback controller design
 
-Results_hinfstruct = struct();
-
 sys_3d1 = "Design";
 open_system(sys_3d1);
 
@@ -637,7 +635,6 @@ opt_3d1 = hinfstructOptions('RandomStart', RS, 'UseParallel', UP, 'TolGain', Tol
 Ci_red_star = zpk(Ce_red_star*tf('s'));
 Ci_red_star = minreal(Ci_red_star);
 
-
 figure;
 bode(Ci_red_star, Ci_red);
 
@@ -645,19 +642,19 @@ bode(Ci_red_star, Ci_red);
 
 %% After optimization
 
+
+%Get the CL system 
 Twz_star = lft(P_3d1, Ce_red_star, 1, 1);
 
-
-% Display the gamma of the star
-disp('gamma values of the airframe and weighting filters')
+% Display the gammas of the star system
+disp('gamma values of the Controller obtained through hinfstruct')
 disp(norm(Twz_star, 'Inf'));
 disp(norm(Twz_star(1), 'Inf'));
 disp(norm(Twz_star(2), 'Inf'));
 disp(norm(Twz_star(3), 'Inf'));
 
 omega = logspace(-1, 5, 1000);
-
-% Singular values plots of the CL weighted Airframe system
+% Singular values plots of the 
 figure;
 sigmaplot(Twz_star, omega, p_options);
 hold on;
@@ -669,12 +666,176 @@ sigmaplot(Twz_star(3), omega, p_options);
 hold off;
 legend('T_star_wz', 'T_star_wz1', 'T_star_wz2', 'T_star_wz3');
 
+% Bode plot comparing the Ci_red_star to the previous computer controllers
 figure;
 bode(C_i_min, Ci_red, Ci_red_star);
 legend('C_{i_{min}}', 'C{i_{red}}', 'C{i_{redstar}}');
 grid on;
 
+%Controller Analysis and simulation --------------------------------------
 
+sys_3d2_CL = 'ClosedLoop_Test';
+load_system(sys_3d2_CL);
+
+%Change the value of the Ci_red to Ci_red_star
+block_path = [sys_3d2_CL, '/Ci_red'];
+set_param(block_path, 'sys', 'Ci_red_star');
+
+T_3d2_CL = linearize(sys_3d2_CL);
+
+So_3d2_CL = T_3d2_CL(1,1);
+CeSo_3d2_CL = T_3d2_CL(2,1);
+To_3d2_CL = T_3d2_CL(3,1);
+Tm_3d2_CL = T_3d2_CL(4,1);
+T_r_udotm_3d2_CL = T_3d2_CL(6,1);
+min_Ti_3d2_CL = T_3d2_CL(2,2);
+SoG_3d2_CL = T_3d2_CL(3,2);
+Si_3d2_CL = T_3d2_CL(5,2);
+
+% Define the frequency range for singular value plot
+omega = logspace(-3, 3, 1000);
+
+% Plot the singular values
+figure;
+subplot(2, 3, 1);
+sigma(W1_inv ,'red', So_3c3_CL, 'b', Si_3c3_CL, 'g--', So_3d2_CL,'magenta', Si_3d2_CL, 'magenta--', omega);
+title('Singular Values of W1^{-1}, S_{o}, S_{i}, S_{o}^{*} and S_{i}^{*}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W^{-1}', 'S_{o}', 'S_{i}', 'S_{o}^{*}', 'S_{i}^{*}')
+grid on;
+
+subplot(2, 3, 2);
+sigma(W2_inv, 'r', CeSo_3c3_CL, 'b', CeSo_3d2_CL, 'magenta', omega);
+title('Singular Values of W2^{-1}, C_{e}S_{o}, C_{e}^{*}S_{o}^{*}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W2^{-1}', 'C_{e}S_{0}', 'C_{e}^{*}S_{o}^{*}')
+grid on;
+
+subplot(2, 3, 3);
+sigma(W3_inv, 'r', Tm_3c3_CL, 'b', Tm_3d2_CL, 'magenta', omega);
+title('Singular Values of W3^{-1}, T_{m} and T_{m}^{*}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W3^{-1}', 'T_{m}', 'T_{m}^{*}')
+grid on;
+
+subplot(2, 3, 4);
+sigma(-min_Ti_3c3_CL, 'b', To_3c3_CL, 'g--', -min_Ti_3d2_CL, 'magenta', To_3d2_CL, 'magenta--', omega);
+title('Singular Values of T_{i}, T_{o}, T_{i}^{*}, T_{o}^{*}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('T_{i}', 'T_{o}', 'T_{i}^{*}', 'T_{o}^{*}');
+grid on;
+
+subplot(2, 3, 5);
+sigma(SoG_3c3_CL, 'b', SoG_3d2_CL, 'magenta', omega);
+title('Singular Values of S_{o}G and S_{o}^{*}G');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('S_{o}G', 'S_{o}^{*}G');
+grid on;
+
+subplot(2, 3, 6);
+sigma(C0_e, 'r', C_e_min, 'g--', Ce_red_star, 'magenta', omega);
+title('Singular Values of C_{0_{e}}, C_{e_{red}} and C_{i_{red}}^{*}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('C_{0_{e}}', 'C_{e_{red}}', 'C_{ired}^{*}')
+grid on;
+
+
+% Open the open loop at actuator input
+sys_3d2_OL = 'OpenLoop_Test';
+load_system(sys_3d2_OL);
+
+%Change the value of the Ci_red to Ci_red_star
+block_path = [sys_3d2_OL, '/Ci_red'];
+set_param(block_path, 'sys', 'Ci_red_star');
+
+open_system(sys_3d2_OL);
+T_3d2_OL = linearize(sys_3d2_OL);
+
+% Getting the GM and PM of the open-loop system
+[Gm_3d2_OL,Pm_3d2_OL,Wcg_3d2_OL,Wcp_3d2_OL] = margin(T_3d2_OL);
+
+Dm_3d2_OL = (pi/180)*Pm_3d2_OL/Wcg_3d2_OL; %seconds
+
+figure;
+bode(T_3d2_OL);
+grid on
+title('Bode plot of the Open Loop system')
+
+%Third exercise of 3c3
+figure;
+subplot(2, 2, 1);
+step(So_3c3_CL ,'b', So_3d2_CL, 'magenta');
+title('Step response of S_{o} and S_{o}^{*}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('S_{o}', 'S_{o}^{*}')
+grid on;
+
+subplot(2, 2, 2);
+step(T_d_opt ,'r', To_3c3_CL, 'b', To_3d2_CL, 'magenta');
+title('Step response of T_{d}, T_{o} and T_{o}^{*}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('T_{d}','T_{o}', 'T_{o}^{*}')
+grid on;
+
+subplot(2, 2, 3);
+step(SoG_3c3_CL ,'b', SoG_3d2_CL, 'magenta');
+title('Step response of S_{o}G and S_{o}^{*}G');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('S_{o}G', 'S_{o}^{*}G')
+grid on;
+
+subplot(2, 2, 4);
+step((180/pi)*T_r_udotm_3c3_CL ,'b', (180/pi)*T_r_udotm_3d2_CL, 'magenta');
+title('Step response of T_{r_{udot_{m}}} and T_{r_{udot_{m}}}^{*}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('T_{rudotm}', 'T_{rudotm}^{*}');
+grid on;
+
+
+
+
+%---------------------------------------------------------
+% Save P, Ce_red_star and its relevant information and Ci_red_star to the structure
+Results_hinfstruct.P = P_3d1;
+Results_hinfstruct.Ce_red_star = Ce_red_star;
+Results_hinfstruct.gamma_star = gamma_star;
+Results_hinfstruct.opt_3d1 = opt_3d1;
+Results_hinfstruct.info = info_3d1;
+Results_hinfstruct.Ci_red_star = Ci_red_star;
+%---------------------------------------------------------
+%---------------------------------------------------------
+% Save Twz_star to the structure
+Results_hinfstruct.Twz_star = Twz_star;
+%---------------------------------------------------------
+Results_hinfstruct.T_3d2_OL = T_3d2_OL;
+Results_hinfstruct.Gm_3d2_OL = Gm_3d2_OL;
+Results_hinfstruct.Pm_3d2_OL = Pm_3d2_OL;
+Results_hinfstruct.Wcg_3d2_OL = Wcg_3d2_OL;
+Results_hinfstruct.Wcp_3d2_OL = Wcp_3d2_OL;
+Results_hinfstruct.Dm_3d2_OL= Dm_3d2_OL;
+%---------------------------------------------------------
+%Save Ff, Closed Loop T and relavant trasnfer functions to structure Results_hinfsyn
+Results_hinfstruct.F_f = F_f;
+Results_hinfstruct.T_3d2_CL = T_3d2_CL;
+Results_hinfstruct.So_3d2_CL = So_3d2_CL;
+Results_hinfstruct.CeSo_3d2_CL = CeSo_3d2_CL;
+Results_hinfstruct.To_3d2_CL = To_3d2_CL;
+Results_hinfstruct.Tm_3d2_CL = Tm_3d2_CL;
+Results_hinfstruct.T_r_udotm_3d2_CL = T_r_udotm_3d2_CL;
+Results_hinfstruct.min_Ti_3d2_CL = min_Ti_3d2_CL;
+Results_hinfstruct.SoG_3d2_CL = SoG_3d2_CL;
+Results_hinfstruct.Si_3d2_CL = Si_3d2_CL;
+%---------------------------------------------------------
 
 % Function used for fmincon in question 3B.1
 % function error = compute_step_error(params, ts_d, Md_d)
@@ -691,5 +852,142 @@ grid on;
 %     error = ts_error + Md_error;
 % 
 % end
+%% Feedforward
 
+%Part 3E.1 Controller Design
 
+Results_FeedForward = struct();
+
+F_f_init = zpk(T_d_opt * Results_hinfstruct.To_3d2_CL^-1);
+
+Results_FeedForward.F_f_init = F_f_init;
+
+%Part 3E.2 Controller Order Reduction
+
+%Evaluating poles and zeros of F_f_init as well as their relevant
+%characteristics 
+
+[wn_F_f_init, damp_F_f_init, poles_F_f_init] = damp(F_f_init);
+zeros_F_f_init = zero(F_f_init);
+wn_zeros_F_f_init = abs(zeros_F_f_init);
+
+disp('These are pole characteristics of F_f_init');
+disp(table(wn_F_f_init, damp_F_f_init, poles_F_f_init));
+
+disp('These are the zero characteritsics of F_f_init');
+disp(table(wn_zeros_F_f_init, zeros_F_f_init));
+
+%Removing required poles and zeros to form the truncated controller
+
+[Z_F_f_init, P_F_f_init, K_F_f_init] = zpkdata(F_f_init, 'v');
+
+%Iterating through all P_F_f_init to identify poles and zeros to be truncated:
+truncated_zeros_F_f_init = [];
+truncated_poles_F_f_init = [];
+
+selected_zeros_F_f_init = [];
+selected_poles_F_f_init = [];
+
+for i = 1:length(Z_F_f_init)
+    if real(Z_F_f_init(i)) > 0
+        truncated_zeros_F_f_init = [truncated_zeros_F_f_init; Z_F_f_init(i)];
+    elseif abs(Z_F_f_init(i)) == max(abs(Z_F_f_init))
+            truncated_zeros_F_f_init= [truncated_zeros_F_f_init; Z_F_f_init(i)];    
+    elseif real(Z_F_f_init(i)) < 0
+        selected_zeros_F_f_init = [selected_zeros_F_f_init; Z_F_f_init(i)];
+    end
+end           
+        
+
+for i = 1:length(P_F_f_init)
+    if real(P_F_f_init(i)) > 0
+        truncated_poles_F_f_init = [truncated_poles_F_f_init; P_F_f_init(i)];
+    else 
+        selected_poles_F_f_init = [selected_poles_F_f_init; P_F_f_init(i)];
+    end
+end    
+
+% Finding appropriate gain adjustement
+gain_adjust_F_f_init = [];
+for i = 1:length(truncated_zeros_F_f_init)
+    if abs(truncated_zeros_F_f_init(i)) == max(abs(truncated_zeros_F_f_init))
+        gain_adjust_F_f_init = [gain_adjust_F_f_init; abs(truncated_zeros_F_f_init(i))];
+    end
+end
+
+gain_scale_f_lf = K_F_f_init * gain_adjust_F_f_init(1) *gain_adjust_F_f_init(2); 
+
+%Findfing F_f truncated
+F_f_lf = zpk(selected_zeros_F_f_init, selected_poles_F_f_init, gain_scale_f_lf);
+
+if round(dcgain(F_f_lf),3) == round(dcgain(F_f_init),3)
+    disp('Yay you did well in scaling');
+end
+
+%plotting singular values of both feedforward controllers
+
+figure;
+sigma(F_f_init, 'b', F_f_lf, 'r')
+title('Singular value plot of F_{f_{init}} vs F_{f_{lf}}')
+grid on;
+legend('F_{f_{init}}', 'F_{f_{lf}}')
+
+%Script below obtained from Model Reducer app 
+%-----------------------------------------------------------------
+% Reduce LTI model order using balanced truncation 
+% Compute reduced order approximation on specified frequency range
+R_3e = reducespec(F_f_lf,'balanced');
+% Set options for Balanced Truncation specification
+% Frequency range for computing state contributions
+R_3e.Options.FreqIntervals = [0.1 100];
+% Compute MOR data once
+R_3e = process(R_3e);
+% Get reduced-order model
+F_f_3e3 = getrom(R_3e,Order=3);
+% Create comparison plot
+figure;
+bode(F_f_init, F_f_lf, F_f_3e3);
+grid on;
+title('Bode plot comparison of all three F_{f} controllers');
+legend('F_{f_{init}}', 'F_{f_{lf}}', 'F_{f}')
+%-----------------------------------------------------------------
+
+%Pole zero map of truncated and reduced
+
+figure;
+pzmap(F_f_init, F_f_3e3);
+grid on;
+legend('F_{f_{init}}', 'F_{f}');
+title('PoleZero map of the truncated and reduced F_{f} controllers');
+
+% Time domain analysis of feedforward, hinfstruct, hinfsyn
+
+sys_3e3_CL = 'ClosedLoop_Test';
+load_system(sys_3e3_CL);
+
+%Change the value of F_f to F_f_3e3
+block_path_Ci_red = [sys_3e3_CL, '/F_f'];
+set_param(block_path_Ci_red, 'sys', 'F_f_3e3');
+
+%Linearize new model and obtain the closed loop transfer function
+T_3e3_CL = linearize(sys_3e3_CL);
+
+To_3e3_CL = T_3e3_CL(3,1);
+T_r_udotm_3e3_CL = T_3e3_CL(6,1);
+
+figure;
+subplot(2, 2, 2);
+step(T_d_opt ,'r', To_3c3_CL, 'b', To_3d2_CL, 'magenta', To_3e3_CL, 'green');
+title('Step response of T_{d}, T_{o}, T_{o}^{*} and T_{o_{ff}}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('T_{d}','T_{o}', 'T_{o}^{*}')
+grid on;
+
+subplot(2, 2,4);
+step((180/pi)*T_r_udotm_3c3_CL ,'b', (180/pi)*T_r_udotm_3d2_CL, 'magenta', (180/pi)*T_r_udotm_3e3_CL, 'green');
+title('Step response of T_{r_{udot_{m}}}, T_{r_{udot_{m}}}^{*}, T_{r_{udot_{m_{ff}}}}');
+xlabel('Time[s]');
+ylabel('Amplitude [deg/s]');
+legend('T_{rudotm}', 'T_{rudotm}^{*}', 'T_{r_{udot_{m_{ff}}}}');
+grid on;
