@@ -864,3 +864,102 @@ F_f_init = zpk(T_d_opt * Results_hinfstruct.To_3d2_CL^-1);
 Results_FeedForward.F_f_init = F_f_init;
 
 %Part 3E.2 Controller Order Reduction
+
+%Evaluating poles and zeros of F_f_init as well as their relevant
+%characteristics 
+
+[wn_F_f_init, damp_F_f_init, poles_F_f_init] = damp(F_f_init);
+zeros_F_f_init = zero(F_f_init);
+wn_zeros_F_f_init = abs(zeros_F_f_init);
+
+disp('These are pole characteristics of F_f_init');
+disp(table(wn_F_f_init, damp_F_f_init, poles_F_f_init));
+
+disp('These are the zero characteritsics of F_f_init');
+disp(table(wn_zeros_F_f_init, zeros_F_f_init));
+
+%Removing required poles and zeros to form the truncated controller
+
+[Z_F_f_init, P_F_f_init, K_F_f_init] = zpkdata(F_f_init, 'v');
+
+%Iterating through all P_F_f_init to identify poles and zeros to be truncated:
+truncated_zeros_F_f_init = [];
+truncated_poles_F_f_init = [];
+
+selected_zeros_F_f_init = [];
+selected_poles_F_f_init = [];
+
+for i = 1:length(Z_F_f_init)
+    if real(Z_F_f_init(i)) > 0
+        truncated_zeros_F_f_init = [truncated_zeros_F_f_init; Z_F_f_init(i)];
+    elseif abs(Z_F_f_init(i)) == max(abs(Z_F_f_init))
+            truncated_zeros_F_f_init= [truncated_zeros_F_f_init; Z_F_f_init(i)];    
+    elseif real(Z_F_f_init(i)) < 0
+        selected_zeros_F_f_init = [selected_zeros_F_f_init; Z_F_f_init(i)];
+    end
+end           
+        
+
+for i = 1:length(P_F_f_init)
+    if real(P_F_f_init(i)) > 0
+        truncated_poles_F_f_init = [truncated_poles_F_f_init; P_F_f_init(i)];
+    else 
+        selected_poles_F_f_init = [selected_poles_F_f_init; P_F_f_init(i)];
+    end
+end    
+
+% Finding appropriate gain adjustement
+gain_adjust_F_f_init = [];
+for i = 1:length(truncated_zeros_F_f_init)
+    if abs(truncated_zeros_F_f_init(i)) == max(abs(truncated_zeros_F_f_init))
+        gain_adjust_F_f_init = [gain_adjust_F_f_init; abs(truncated_zeros_F_f_init(i))];
+    end
+end
+
+gain_scale_f_lf = K_F_f_init * gain_adjust_F_f_init(1) *gain_adjust_F_f_init(2); 
+
+%Findfing F_f truncated
+F_f_lf = zpk(selected_zeros_F_f_init, selected_poles_F_f_init, gain_scale_f_lf);
+
+if round(dcgain(F_f_lf),3) == round(dcgain(F_f_init),3)
+    disp('Yay you did well in scaling');
+end
+
+%plotting singular values of both feedforward controllers
+
+figure;
+sigma(F_f_init, 'b', F_f_lf, 'r')
+title('Singular value plot of F_{f_{init}} vs F_{f_{lf}}')
+grid on;
+legend('F_{f_{init}}', 'F_{f_{lf}}')
+
+%Script below obtained from Model Reducer app 
+%-----------------------------------------------------------------
+% Reduce LTI model order using balanced truncation 
+% Compute reduced order approximation on specified frequency range
+R_3e = reducespec(F_f_lf,'balanced');
+% Set options for Balanced Truncation specification
+% Frequency range for computing state contributions
+R_3e.Options.FreqIntervals = [0.1 100];
+% Compute MOR data once
+R_3e = process(R_3e);
+% Get reduced-order model
+F_f = getrom(R_3e,Order=3);
+% Create comparison plot
+figure;
+bode(F_f_init, F_f_lf, F_f);
+grid on;
+title('Bode plot comparison of all three F_{f} controllers');
+legend('F_{f_{init}}', 'F_{f_{lf}}', 'F_{f}')
+%-----------------------------------------------------------------
+
+%Pole zero map of truncated and reduced
+
+figure;
+pzmap(F_f_init, F_f);
+grid on;
+legend('F_{f_{init}}', 'F_{f}');
+title('PoleZero map of the truncated and reduced F_{f} controllers');
+
+
+
