@@ -643,6 +643,7 @@ bode(Ci_red_star, Ci_red);
 
 %% After optimization
 
+
 %Get the CL system 
 Twz_star = lft(P_3d1, Ce_red_star, 1, 1);
 
@@ -817,7 +818,6 @@ Results_hinfstruct.Ci_red_star = Ci_red_star;
 % Save Twz_star to the structure
 Results_hinfstruct.Twz_star = Twz_star;
 %---------------------------------------------------------
-Results_hinfstruct.P_3d2 = P_3d2;
 Results_hinfstruct.T_3d2_OL = T_3d2_OL;
 Results_hinfstruct.Gm_3d2_OL = Gm_3d2_OL;
 Results_hinfstruct.Pm_3d2_OL = Pm_3d2_OL;
@@ -853,5 +853,14 @@ Results_hinfstruct.Si_3d2_CL = Si_3d2_CL;
 %     error = ts_error + Md_error;
 % 
 % end
+%% Feedforward
 
+%Part 3E.1 Controller Design
 
+Results_FeedForward = struct();
+
+F_f_init = zpk(T_d_opt * Results_hinfstruct.To_3d2_CL^-1);
+
+Results_FeedForward.F_f_init = F_f_init;
+
+%Part 3E.2 Controller Order Reduction
