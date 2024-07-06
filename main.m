@@ -944,10 +944,10 @@ R_3e.Options.FreqIntervals = [0.1 100];
 % Compute MOR data once
 R_3e = process(R_3e);
 % Get reduced-order model
-F_f = getrom(R_3e,Order=3);
+F_f_3e3 = getrom(R_3e,Order=3);
 % Create comparison plot
 figure;
-bode(F_f_init, F_f_lf, F_f);
+bode(F_f_init, F_f_lf, F_f_3e3);
 grid on;
 title('Bode plot comparison of all three F_{f} controllers');
 legend('F_{f_{init}}', 'F_{f_{lf}}', 'F_{f}')
@@ -956,10 +956,38 @@ legend('F_{f_{init}}', 'F_{f_{lf}}', 'F_{f}')
 %Pole zero map of truncated and reduced
 
 figure;
-pzmap(F_f_init, F_f);
+pzmap(F_f_init, F_f_3e3);
 grid on;
 legend('F_{f_{init}}', 'F_{f}');
 title('PoleZero map of the truncated and reduced F_{f} controllers');
+
+% 3E.3 Controller Analysis and Simulation------------------------------
+
+sys_3e3_CL = 'ClosedLoop_Test';
+load_system(sys_3e3_CL);
+
+%Change the value of the F_f to F_f_3e3
+block_path = [sys_3e3_CL, '/F_f'];
+set_param(block_path, 'sys', 'F_f_3e3');
+
+T_3e3_CL = linearize(sys_3e3_CL);
+
+Tm_3e3_CL = T_3e3_CL(4,1);
+
+subplot(2, 2, 1);
+ttitle('Singular Values of W3^{-1}, T_{m}, T_{m}^{*} and T_{m_{ff}}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W3^{-1}', 'T_{m}', 'T_{m}^{*}', 'T_{m_{ff}}')
+grid on;
+
+subplot(2, 2, 3);
+sigma(Ci_red, 'r', Ci_red_star, 'magenta', F_f_3e3, 'green', omega);
+title('Singular Values of C_{0_{e}}, C_{e_{red}}, C_{i_{red}}^{*} and F_{f}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('C_{0_{e}}', 'C_{e_{red}}', 'C_{ired}^{*}', 'F_{f}')
+grid on;
 
 
 
