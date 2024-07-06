@@ -389,7 +389,7 @@ selected_poles_C_i_min = [poles_C0_e(2:6); poles_C0_e(9)];
 C_i_min = zpk(selected_zeros_C0_e, selected_poles_C_i_min, K_C0_e_min);
 
 % Perform model reduction, specifying the oder of the reduced model
-Ci_red = balred(C_i_min,3); 
+Ci_red = balred(C_i_min,2); 
 
 % Compare Bode plots for the original and reduced transfer functions
 figure;
@@ -522,6 +522,40 @@ xlabel('Time[s]');
 ylabel('Amplitude');
 legend('T_{r_{udot_{m}}}')
 grid on;
+
+%% Feedback controller design
+
+sys_3d1 = "Design";
+open_system(sys_3d1);
+
+% Tunable parameters
+K_star = 2;
+n1_star = 2;
+n2_star = 3;
+d1_star = 5;
+d2_star = 6;
+
+sys_trial = tf([1,n1_star,n2_star],[1,d1_star,d2_star]);
+
+% Define the tunable transfer function with two poles and two zeros
+Ce_red_init = tunableTF('Ce_red_star', sys_trial);  % 'Ci_red' has 2 poles and 2 zeros
+
+% Define the integrator
+Integrator = tf(K_star, [1 0]);
+
+% Combine the tunable transfer function with the integrator
+Ce_red_init = series(Integrator, Ce_red_init);
+
+P_3d1 = linearize(sys_3d1);
+
+% Options for the hinfstruct
+RS = 20;
+UP = true;
+Tol_G = 10^-5;
+opt_3d1 = hinfstructOptions('RandomStart', RS, 'UseParallel', UP, 'TolGain', Tol_G);
+
+% Run optimization hinfstruct
+[Ce_red_star, gamma_star, info_3d1] = hinfstruct(P_3d1,Ce_red_init,opt_3d1);
 
 % Function used for fmincon in question 3B.1
 % function error = compute_step_error(params, ts_d, Md_d)
