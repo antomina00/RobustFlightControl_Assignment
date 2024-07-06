@@ -306,26 +306,14 @@ rel_tol = 1*10^-6;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
 [C0_e, CL_Twz, gamma] = hinfsyn(P, 1, 1, [0, 10], opt_3c);
 
-%---------------------------------------------------------
-%Save P, its zpk form, C0_e, CL_Twz and associated gamma to structure Results_hinfsyn
-Results_hinfsyn.P =P;
-Results_hinfsyn.zpk_P = zpk_P;
-Results_hinfsyn.C0_e = C0_e;
-Results_hinfsyn.CL_Twz = CL_Twz;
-Results_hinfsyn.gamma = gamma;
-%---------------------------------------------------------
+
 
 % Verifying Hinf synthesis matches the theory
 S_o = (1 + G* C0_e)^-1;
 T_o = G*C0_e*S_o;
 T_wz_theory = [W1*S_o; W2*C0_e*S_o; W3*(T_d_opt - T_o)];
 
-%---------------------------------------------------------
-%Save Twz_theory, So and To to structure Results_hinfsyn
-Results_hinfsyn.S_o = S_o;
-Results_hinfsyn.T_o = T_o;
-Results_hinfsyn.T_wz_theory = T_wz_theory;
-%---------------------------------------------------------
+
 
 % Defining options for the sigmaplot
 p_options = sigmaoptions;
@@ -353,10 +341,6 @@ sigmaplot(CL_Twz(3), p_options);
 hold off;
 legend('T_wz', 'T_wz1', 'T_wz2', 'T_wz3');
 
-%---------------------------------------------------------
-%Save p_options to structure Results_hinfsyn
-Results_hinfsyn.p_options = p_options;
-%---------------------------------------------------------
 
 % Part 3.C2:  Controller order reduction
 
@@ -366,12 +350,6 @@ zpk_C0_e = zpk(C0_e);
 zeros_C0_e = zero(zpk_C0_e);
 nat_freq_zeros_C0_e = sqrt(real(zeros_C0_e).^2 + imag(zeros_C0_e).^2);
 
-%---------------------------------------------------------
-%Save zpk form of C0_e and its poles/zeros to structure Results_hinfsyn
-Results_hinfsyn.zpk_C0_e = zpk_C0_e;
-Results_hinfsyn.poles_C0_e = poles_C0_e;
-Results_hinfsyn.zeros_C0_e = zeros_C0_e;
-%---------------------------------------------------------
 
 %Displaying the poles and zeros of initial C0_e obtaied from Part 3C.1
 disp("These are the poles of C0_e:");
@@ -405,11 +383,6 @@ K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e_1*gain_adjustment_C0_e_2*gain_adju
 % 
 C_e_min = zpk(selected_zeros_C0_e, selected_poles_C0_e, K_C0_e_min);
  
-%---------------------------------------------------------
-%Save C_e_min to structure Results_hinfsyn
-Results_hinfsyn.C_e_min = C_e_min;
-%---------------------------------------------------------
-
 
 disp('The minimized transfer function C_e_min:');
 disp(C_e_min);
@@ -427,12 +400,6 @@ C_i_min = zpk(selected_zeros_C0_e, selected_poles_C_i_min, K_C0_e_min);
 % Perform model reduction, specifying the oder of the reduced model
 Ci_red = balred(C_i_min,2); 
 
-%---------------------------------------------------------
-%Save C_i_min and Ci_red to structure Results_hinfsyn
-Results_hinfsyn.C_i_min = C_i_min;
-Results_hinfsyn.Ci_red = Ci_red;
-%---------------------------------------------------------
-
 % Compare Bode plots for the original and reduced transfer functions
 figure;
 bode(C_i_min, Ci_red);
@@ -443,16 +410,6 @@ title('Bode Plot Comparison');
 [mag_C_i_red, phase_C_i_red, wn_C_i_red] = bode(Ci_red);
 phase_peak_C_i_min = max(phase_C_i_min);
 phase_peak_Ci_red = max(phase_C_i_red);
-
-%---------------------------------------------------------
-%Save mag/phase C_i_min and C_i_red to structure Results_hinfsyn
-Results_hinfsyn.mag_C_i_min = mag_C_i_min;
-Results_hinfsyn.phase_C_i_min = phase_C_i_min;
-Results_hinfsyn.wn_C_i_min = wn_C_i_min;
-Results_hinfsyn.mag_C_i_red = mag_C_i_red;
-Results_hinfsyn.phase_C_i_red = phase_C_i_red;
-Results_hinfsyn.wn_C_i_red = wn_C_i_red;
-%---------------------------------------------------------
 
 % Part 3C.2: Controller Analysis and simulation
 F_f = 1;
@@ -470,19 +427,6 @@ min_Ti_3c3_CL = T_3c3_CL(2,2);
 SoG_3c3_CL = T_3c3_CL(3,2);
 Si_3c3_CL = T_3c3_CL(5,2);
 
-%---------------------------------------------------------
-%Save Ff, Closed Loop T and relavant trasnfer functions to structure Results_hinfsyn
-Results_hinfsyn.F_f = F_f;
-Results_hinfsyn.T_3c3_CL = T_3c3_CL;
-Results_hinfsyn.So_3c3_CL = So_3c3_CL;
-Results_hinfsyn.CeSo_3c3_CL = CeSo_3c3_CL;
-Results_hinfsyn.To_3c3_CL = To_3c3_CL;
-Results_hinfsyn.Tm_3c3_CL = Tm_3c3_CL;
-Results_hinfsyn.T_r_udotm_3c3_CL = T_r_udotm_3c3_CL;
-Results_hinfsyn.min_Ti_3c3_CL = min_Ti_3c3_CL;
-Results_hinfsyn.SoG_3c3_CL = SoG_3c3_CL;
-Results_hinfsyn.Si_3c3_CL = Si_3c3_CL;
-%---------------------------------------------------------
 
 % Define the frequency range for singular value plot
 omega = logspace(-3, 3, 1000);
@@ -546,15 +490,6 @@ T_3c3_OL = linearize(sys_3c3_OL);
 
 Dm_3c3_OL = (pi/180)*Pm_3c3_OL/Wcg_3c3_OL; %seconds
 
-%---------------------------------------------------------
-%Save Open Loop T as well as its relevant margins to structure Results_hinfsyn
-Results_hinfsyn.T_3c3_OL = T_3c3_OL;
-Results_hinfsyn.Gm_3c3_OL = Gm_3c3_OL;
-Results_hinfsyn.Pm_3c3_OL = Pm_3c3_OL;
-Results_hinfsyn.Wcg_3c3_OL = Wcg_3c3_OL;
-Results_hinfsyn.Wcp_3c3_OL = Wcp_3c3_OL;
-Results_hinfsyn.Dm_3c3_OL = Dm_3c3_OL;
-%---------------------------------------------------------
 
 figure;
 bode(T_3c3_OL);
@@ -599,8 +534,70 @@ grid on;
 %Save Step responses to structure Results_hinfsyn
 Results_hinfsyn.step_responses = struct('So_response', So_3c3_CL, 'T_d_opt_response', T_d_opt, 'To_response', To_3c3_CL, 'SoG_response', SoG_3c3_CL, 'T_r_udotm_response', T_r_udotm_3c3_CL);
 %---------------------------------------------------------
-
-
+%---------------------------------------------------------
+%Save P, its zpk form, C0_e, CL_Twz and associated gamma to structure Results_hinfsyn
+Results_hinfsyn.P =P;
+Results_hinfsyn.zpk_P = zpk_P;
+Results_hinfsyn.C0_e = C0_e;
+Results_hinfsyn.CL_Twz = CL_Twz;
+Results_hinfsyn.gamma = gamma;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save Twz_theory, So and To to structure Results_hinfsyn
+Results_hinfsyn.S_o = S_o;
+Results_hinfsyn.T_o = T_o;
+Results_hinfsyn.T_wz_theory = T_wz_theory;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save p_options to structure Results_hinfsyn
+Results_hinfsyn.p_options = p_options;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save zpk form of C0_e and its poles/zeros to structure Results_hinfsyn
+Results_hinfsyn.zpk_C0_e = zpk_C0_e;
+Results_hinfsyn.poles_C0_e = poles_C0_e;
+Results_hinfsyn.zeros_C0_e = zeros_C0_e;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save C_e_min to structure Results_hinfsyn
+Results_hinfsyn.C_e_min = C_e_min;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save C_i_min and Ci_red to structure Results_hinfsyn
+Results_hinfsyn.C_i_min = C_i_min;
+Results_hinfsyn.Ci_red = Ci_red;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save mag/phase C_i_min and C_i_red to structure Results_hinfsyn
+Results_hinfsyn.mag_C_i_min = mag_C_i_min;
+Results_hinfsyn.phase_C_i_min = phase_C_i_min;
+Results_hinfsyn.wn_C_i_min = wn_C_i_min;
+Results_hinfsyn.mag_C_i_red = mag_C_i_red;
+Results_hinfsyn.phase_C_i_red = phase_C_i_red;
+Results_hinfsyn.wn_C_i_red = wn_C_i_red;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save Ff, Closed Loop T and relavant trasnfer functions to structure Results_hinfsyn
+Results_hinfsyn.F_f = F_f;
+Results_hinfsyn.T_3c3_CL = T_3c3_CL;
+Results_hinfsyn.So_3c3_CL = So_3c3_CL;
+Results_hinfsyn.CeSo_3c3_CL = CeSo_3c3_CL;
+Results_hinfsyn.To_3c3_CL = To_3c3_CL;
+Results_hinfsyn.Tm_3c3_CL = Tm_3c3_CL;
+Results_hinfsyn.T_r_udotm_3c3_CL = T_r_udotm_3c3_CL;
+Results_hinfsyn.min_Ti_3c3_CL = min_Ti_3c3_CL;
+Results_hinfsyn.SoG_3c3_CL = SoG_3c3_CL;
+Results_hinfsyn.Si_3c3_CL = Si_3c3_CL;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save Open Loop T as well as its relevant margins to structure Results_hinfsyn
+Results_hinfsyn.T_3c3_OL = T_3c3_OL;
+Results_hinfsyn.Gm_3c3_OL = Gm_3c3_OL;
+Results_hinfsyn.Pm_3c3_OL = Pm_3c3_OL;
+Results_hinfsyn.Wcg_3c3_OL = Wcg_3c3_OL;
+Results_hinfsyn.Wcp_3c3_OL = Wcp_3c3_OL;
+Results_hinfsyn.Dm_3c3_OL = Dm_3c3_OL;
+%---------------------------------------------------------
 %% Feedback controller design
 
 Results_hinfstruct = struct();
@@ -640,15 +637,6 @@ opt_3d1 = hinfstructOptions('RandomStart', RS, 'UseParallel', UP, 'TolGain', Tol
 Ci_red_star = zpk(Ce_red_star*tf('s'));
 Ci_red_star = minreal(Ci_red_star);
 
-%---------------------------------------------------------
-% Save P, Ce_red_star and its relevant information and Ci_red_star to the structure
-Results_hinfstruct.P = P_3d1;
-Results_hinfstruct.Ce_red_star = Ce_red_star;
-Results_hinfstruct.gamma_star = gamma_star;
-Results_hinfstruct.opt_3d1 = opt_3d1;
-Results_hinfstruct.info = info_3d1;
-Results_hinfstruct.Ci_red_star = Ci_red_star;
-%---------------------------------------------------------
 
 figure;
 bode(Ci_red_star, Ci_red);
@@ -659,11 +647,6 @@ bode(Ci_red_star, Ci_red);
 
 Twz_star = lft(P_3d1, Ce_red_star, 1, 1);
 
-
-%---------------------------------------------------------
-% Save Twz_star to the structure
-Results_hinfstruct.Twz_star = Twz_star;
-%---------------------------------------------------------
 
 % Display the gamma of the star
 disp('gamma values of the airframe and weighting filters')
@@ -691,10 +674,6 @@ bode(C_i_min, Ci_red, Ci_red_star);
 legend('C_{i_{min}}', 'C{i_{red}}', 'C{i_{redstar}}');
 grid on;
 
-%---------------------------------------------------------
-% Save Twz_star to the structure
-Results_hinfstruct.bode = struct('C_i_min', C_i_min, 'Ci_red', Ci_red, 'Ci_red_star', Ci_red_star);
-%---------------------------------------------------------
 
 
 % Function used for fmincon in question 3B.1
