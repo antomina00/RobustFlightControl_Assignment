@@ -531,6 +531,74 @@ ylabel('Amplitude');
 legend('T_{rudotm}');
 grid on;
 
+%---------------------------------------------------------
+%Save Step responses to structure Results_hinfsyn
+Results_hinfsyn.step_responses = struct('So_response', So_3c3_CL, 'T_d_opt_response', T_d_opt, 'To_response', To_3c3_CL, 'SoG_response', SoG_3c3_CL, 'T_r_udotm_response', T_r_udotm_3c3_CL);
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save P, its zpk form, C0_e, CL_Twz and associated gamma to structure Results_hinfsyn
+Results_hinfsyn.P =P;
+Results_hinfsyn.zpk_P = zpk_P;
+Results_hinfsyn.C0_e = C0_e;
+Results_hinfsyn.CL_Twz = CL_Twz;
+Results_hinfsyn.gamma = gamma;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save Twz_theory, So and To to structure Results_hinfsyn
+Results_hinfsyn.S_o = S_o;
+Results_hinfsyn.T_o = T_o;
+Results_hinfsyn.T_wz_theory = T_wz_theory;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save p_options to structure Results_hinfsyn
+Results_hinfsyn.p_options = p_options;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save zpk form of C0_e and its poles/zeros to structure Results_hinfsyn
+Results_hinfsyn.zpk_C0_e = zpk_C0_e;
+Results_hinfsyn.poles_C0_e = poles_C0_e;
+Results_hinfsyn.zeros_C0_e = zeros_C0_e;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save C_e_min to structure Results_hinfsyn
+Results_hinfsyn.C_e_min = C_e_min;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save C_i_min and Ci_red to structure Results_hinfsyn
+Results_hinfsyn.C_i_min = C_i_min;
+Results_hinfsyn.Ci_red = Ci_red;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save mag/phase C_i_min and C_i_red to structure Results_hinfsyn
+Results_hinfsyn.mag_C_i_min = mag_C_i_min;
+Results_hinfsyn.phase_C_i_min = phase_C_i_min;
+Results_hinfsyn.wn_C_i_min = wn_C_i_min;
+Results_hinfsyn.mag_C_i_red = mag_C_i_red;
+Results_hinfsyn.phase_C_i_red = phase_C_i_red;
+Results_hinfsyn.wn_C_i_red = wn_C_i_red;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save Ff, Closed Loop T and relavant trasnfer functions to structure Results_hinfsyn
+Results_hinfsyn.F_f = F_f;
+Results_hinfsyn.T_3c3_CL = T_3c3_CL;
+Results_hinfsyn.So_3c3_CL = So_3c3_CL;
+Results_hinfsyn.CeSo_3c3_CL = CeSo_3c3_CL;
+Results_hinfsyn.To_3c3_CL = To_3c3_CL;
+Results_hinfsyn.Tm_3c3_CL = Tm_3c3_CL;
+Results_hinfsyn.T_r_udotm_3c3_CL = T_r_udotm_3c3_CL;
+Results_hinfsyn.min_Ti_3c3_CL = min_Ti_3c3_CL;
+Results_hinfsyn.SoG_3c3_CL = SoG_3c3_CL;
+Results_hinfsyn.Si_3c3_CL = Si_3c3_CL;
+%---------------------------------------------------------
+%---------------------------------------------------------
+%Save Open Loop T as well as its relevant margins to structure Results_hinfsyn
+Results_hinfsyn.T_3c3_OL = T_3c3_OL;
+Results_hinfsyn.Gm_3c3_OL = Gm_3c3_OL;
+Results_hinfsyn.Pm_3c3_OL = Pm_3c3_OL;
+Results_hinfsyn.Wcg_3c3_OL = Wcg_3c3_OL;
+Results_hinfsyn.Wcp_3c3_OL = Wcp_3c3_OL;
+Results_hinfsyn.Dm_3c3_OL = Dm_3c3_OL;
+%---------------------------------------------------------
 %% Feedback controller design
 
 sys_3d1 = "Design";
@@ -732,6 +800,43 @@ xlabel('Time[s]');
 ylabel('Amplitude');
 legend('T_{rudotm}', 'T_{rudotm}^{*}');
 grid on;
+
+
+
+
+%---------------------------------------------------------
+% Save P, Ce_red_star and its relevant information and Ci_red_star to the structure
+Results_hinfstruct.P = P_3d1;
+Results_hinfstruct.Ce_red_star = Ce_red_star;
+Results_hinfstruct.gamma_star = gamma_star;
+Results_hinfstruct.opt_3d1 = opt_3d1;
+Results_hinfstruct.info = info_3d1;
+Results_hinfstruct.Ci_red_star = Ci_red_star;
+%---------------------------------------------------------
+%---------------------------------------------------------
+% Save Twz_star to the structure
+Results_hinfstruct.Twz_star = Twz_star;
+%---------------------------------------------------------
+Results_hinfstruct.P_3d2 = P_3d2;
+Results_hinfstruct.T_3d2_OL = T_3d2_OL;
+Results_hinfstruct.Gm_3d2_OL = Gm_3d2_OL;
+Results_hinfstruct.Pm_3d2_OL = Pm_3d2_OL;
+Results_hinfstruct.Wcg_3d2_OL = Wcg_3d2_OL;
+Results_hinfstruct.Wcp_3d2_OL = Wcp_3d2_OL;
+Results_hinfstruct.Dm_3d2_OL= Dm_3d2_OL;
+%---------------------------------------------------------
+%Save Ff, Closed Loop T and relavant trasnfer functions to structure Results_hinfsyn
+Results_hinfstruct.F_f = F_f;
+Results_hinfstruct.T_3d2_CL = T_3d2_CL;
+Results_hinfstruct.So_3d2_CL = So_3d2_CL;
+Results_hinfstruct.CeSo_3d2_CL = CeSo_3d2_CL;
+Results_hinfstruct.To_3d2_CL = To_3d2_CL;
+Results_hinfstruct.Tm_3d2_CL = Tm_3d2_CL;
+Results_hinfstruct.T_r_udotm_3d2_CL = T_r_udotm_3d2_CL;
+Results_hinfstruct.min_Ti_3d2_CL = min_Ti_3d2_CL;
+Results_hinfstruct.SoG_3d2_CL = SoG_3d2_CL;
+Results_hinfstruct.Si_3d2_CL = Si_3d2_CL;
+%---------------------------------------------------------
 
 % Function used for fmincon in question 3B.1
 % function error = compute_step_error(params, ts_d, Md_d)
