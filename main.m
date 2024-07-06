@@ -397,11 +397,6 @@ bode(C_i_min, Ci_red);
 legend('Original Ci_min', 'Reduced Ci_red');
 title('Bode Plot Comparison');
 
-figure;
-pzmap(C_i_min, Ci_red);
-legend('C_{i_{min}}', 'C{i_{red}}');
-grid on;
-
 [mag_C_i_min, phase_C_i_min, wn_C_i_min] = bode(C_i_min);
 [mag_C_i_red, phase_C_i_red, wn_C_i_red] = bode(Ci_red);
 phase_peak_C_i_min = max(phase_C_i_min);
@@ -551,11 +546,48 @@ P_3d1 = linearize(sys_3d1);
 % Options for the hinfstruct
 RS = 20;
 UP = true;
-Tol_G = 10^-5;
+Tol_G = 10^-3;
 opt_3d1 = hinfstructOptions('RandomStart', RS, 'UseParallel', UP, 'TolGain', Tol_G);
 
 % Run optimization hinfstruct
 [Ce_red_star, gamma_star, info_3d1] = hinfstruct(P_3d1,Ce_red_init,opt_3d1);
+
+Ci_red_star = zpk(Ce_red_star*tf('s'));
+Ci_red_star = minreal(Ci_red_star);
+
+figure;
+bode(Ci_red_star, Ci_red);
+
+
+
+%% After optimization
+
+Twz_star = lft(P_3d1, Ce_red_star, 1, 1);
+
+% Display the gamma of the star
+disp('gamma values of the airframe and weighting filters')
+disp(norm(Twz_star, 'Inf'));
+disp(norm(Twz_star(1), 'Inf'));
+disp(norm(Twz_star(2), 'Inf'));
+disp(norm(Twz_star(3), 'Inf'));
+
+omega = logspace(-1, 5, 1000);
+% Singular values plots of the CL weighted Airframe system
+figure;
+sigmaplot(Twz_star, omega, p_options);
+hold on;
+sigmaplot(Twz_star(1), omega, p_options);
+hold on;
+sigmaplot(Twz_star(2), omega, p_options);
+hold on;
+sigmaplot(Twz_star(3), omega, p_options);
+hold off;
+legend('T_star_wz', 'T_star_wz1', 'T_star_wz2', 'T_star_wz3');
+
+figure;
+bode(C_i_min, Ci_red, Ci_red_star);
+legend('C_{i_{min}}', 'C{i_{red}}', 'C{i_{redstar}}');
+grid on;
 
 % Function used for fmincon in question 3B.1
 % function error = compute_step_error(params, ts_d, Md_d)
