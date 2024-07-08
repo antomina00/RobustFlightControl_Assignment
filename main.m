@@ -1,4 +1,4 @@
- %% Parameters of the system
+%% Parameters of the system
 g = 9.80665; % m/s^2 gravity
 a = 316.0561; %m/s at operating point altitude 6096m
 M = 3; % Mach number at operating point
@@ -43,7 +43,7 @@ save G_act
 %% Loading Simulink model to obatin state space of open loop actuator + system dynamics 
 
 sys_am = "Airframe";
-open_system(sys_am)
+load_system(sys_am)
 OP_am_object = operspec(sys_am);
 
 % Set the operating point condition
@@ -124,7 +124,7 @@ C_q = -0.163;
 % C_q = -0.024;
 sys_cq = 'ClosedLoop_Cq';
 % Open the Simulink model
-open_system(sys_cq);
+load_system(sys_cq);
 
 % Update the Gain block with the value from the workspace
 % set_param('ClosedLoop_Cq','Gain','C_q');
@@ -164,7 +164,7 @@ k_sc = dcgain(G_cl_q_unsc);
 C_sc = 1/k_sc;
 
 sys_cqcs = 'ClosedLoop_CqCsc';
-open_system(sys_cqcs);
+load_system(sys_cqcs);
 
 G = linearize(sys_cqcs);
 zpk_G = zpk(G);
@@ -178,7 +178,7 @@ zpk_G = zpk(G);
 C_i = 5.48;%5.48
 
 sys_cqcsci = 'ClosedLoop_CqCscCi';
-open_system(sys_cqcsci);
+load_system(sys_cqcsci);
 
 G_CqCscCi = linearize(sys_cqcsci);
 G_ol_nz_23 = G_CqCscCi(1,1);
@@ -211,13 +211,12 @@ hfgain_w1_abs = db2mag(hfgain_w1_db);
 
 W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
 
-% W3_inv = W1_inv;
 
 % Initialize values of makeweight for the inverse of W2
 dcgain_w2_dB = 100;
-hfgain_w2_dB = -40;
-mag_w2_dB = -15;
-freq_w2_db = 151;
+hfgain_w2_dB = -60;
+mag_w2_dB = -17.5;
+freq_w2_db = 151; %frequency at -3.01 dB actuator bandwidth
 
 % Convert dB gains to abs gains
 hfgain_w2_abs = db2mag(hfgain_w2_dB);
@@ -226,23 +225,24 @@ dcgain_w2_abs = db2mag(dcgain_w2_dB);
 
 W2_inv = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 
-% For question 3C.1, first exercise, W3 != W1. Uncomment the following
+
+% For question 3A.1, first exercise, W3 = W1. Change the mag_w3_dB parameter
+% to -3.01
 % lines:
 % --------------------------------------------
-
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
-mag_w3_dB = -16.2;
+mag_w3_dB = -15;
 freq_w3 = 4;
 
 % Convert dB gains to absolute gains
 dcgain_w3_abs = db2mag(dcgain_w3_dB);
 mag_w3_abs = db2mag(mag_w3_dB);
 hfgain_w3_abs = db2mag(hfgain_w3_db);
-
+% 
 W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
-
 % --------------------------------------------
+
 
 % Invert W1, W2 and W3 filters to obtain the correct TF
 W1  = 1/W1_inv;
@@ -256,33 +256,28 @@ sigma(W2_inv, W1_inv);
 
 % Part #3B - Reference Model Computation
 
-% Trying to use fmincon -------------------------------
-% ts_d = 0.18;
-% Md_d = 5; 
-% 
-% objective = @(x) compute_step_error(x, ts_d, Md_d);
-% 
-% initial_guess = [36.6394*0.5, 0.1];
-% 
-% lb = [0,0];
-% ub = [inf, 1];
-% 
-% options = optimoptions('fmincon', 'Display', 'iter', 'Algorithm', 'sqp');
+% Using fmincon for T_d optimzation -------------------------------
+ts_d = 0.18;
+Md_d = 5; 
 
-% [optimal_params, fval] = fmincon(objective, initial_guess, [],[], [], [], lb, ub, [], options);
+objective = @(x) compute_step_error(x, ts_d, Md_d);
 
-% Extract optimal omega_d and zeta_d
-% % omega_d_opt = optimal_params(1); %37.4518
-% % zeta_d_opt = optimal_params(2); %0.716
+initial_guess_fmincon = [36.6394/2, 0.7]; %Based on Robust Control rule of thumb/usual values of damping ratio
 
+lb = [0, 0];
+ub = [inf, 1];
+
+options_fmincon = optimoptions('fmincon', 'Display', 'iter', 'Algorithm', 'sqp');
+
+[optimal_params, fval] = fmincon(objective, initial_guess_fmincon, [],[], [], [], lb, ub, [], options_fmincon);
+
+% Extract optimal omega_d and zeta_d from fmincon
+omega_d_opt = optimal_params(1); 
+zeta_d_opt =  optimal_params(2); 
 % --------------------------------------
 
-% Reference model values obtained through trial and error
-omega_d_opt = 22.6;
-zeta_d_opt = 0.79;
-counter = 0;
 
-% Plot the step response of the optimized system
+% Create and plot the step response of the optimized system
 T_d_opt = tf([(-omega_d_opt^2/36.6394), omega_d_opt^2], [1, 2*zeta_d_opt*omega_d_opt, omega_d_opt^2]);
 
 figure;
@@ -291,14 +286,21 @@ grid on;
 title('Step Response of the Optimized Reference Model');
 zpk_T = zpk(T_d_opt);
 
+%Check SettlingTime and Overshoot info
+
+stepinfo(zpk_T, "SettlingTimeThreshold", 0.05)
 
 %Part 3C: Controller Design
 
+%Load Simulink model and linearize its transfer function
 sys_3c1 = "Design";
-open_system(sys_3c1);
+load_system(sys_3c1);
 
 P = linearize(sys_3c1);
 zpk_P = zpk(P);
+
+% Obtain Controller transfer function and system Closed Loop transfer
+% function through hinfsynthesis
 
 rel_tol = 1*10^-6;
 opt_3c = hinfsynOptions( 'Method', 'RIC', 'RelTol', rel_tol);
@@ -317,7 +319,7 @@ p_options.Grid = 'on';
 p_options.FreqUnits = 'rad/s';
 
 % Display the gamma 
-disp('gamma values of the airframe and weighting filters')
+disp('Gamma values of the airframe and weighting filters')
 disp(norm(CL_Twz, 'Inf'));
 disp(norm(CL_Twz(1), 'Inf'));
 disp(norm(CL_Twz(2), 'Inf'));
@@ -341,55 +343,94 @@ legend('T_wz', 'T_wz1', 'T_wz2', 'T_wz3');
 zpk_C0_e = zpk(C0_e);
 [wn_C0_e, zeta_C0_e, poles_C0_e] = damp(zpk_C0_e);
 zeros_C0_e = zero(zpk_C0_e);
-nat_freq_zeros_C0_e = sqrt(real(zeros_C0_e).^2 + imag(zeros_C0_e).^2);
+wn_zeros_C0_e = abs(zeros_C0_e);
 
 %Displaying the poles and zeros of initial C0_e obtaied from Part 3C.1
 disp("These are the poles of C0_e:");
 disp(table(wn_C0_e, zeta_C0_e, poles_C0_e, 'VariableNames', {'NaturalFrequency', 'Damping Ratio', 'Poles'}));
 
 disp("These are the zeros of C0_e:");
-disp(table(zeros_C0_e, nat_freq_zeros_C0_e, 'VariableNames', {'Zeros', 'Natural Frequency'}));
+disp(table(wn_zeros_C0_e, zeros_C0_e, 'VariableNames', {'Zeros', 'Natural Frequency'}));
 
 % Obtaining relevant gains associated with the wanted poles and zeros so as
 % to obtain Ce_min 
 [Z_C0_e, P_C0_e, K_PZ_C0_e] = zpkdata(C0_e, 'v');
 
-selected_zeros_C0_e = [zeros_C0_e(1); zeros_C0_e(4:8)]; % %zeros_C0_e(1); zeros_C0_e(3:8)
-selected_poles_C0_e = [poles_C0_e(1:6); poles_C0_e(9)]; % poles_C0_e(9)
 
-% % Calculating the gain adjustement due to very HF pole and zero
-hf_pole_C0_e = poles_C0_e(7:8);
-hf_zero_C0_e = zeros_C0_e(2:3); %2:3 1:2
-gain_adjustment_C0_e_1 = abs(hf_zero_C0_e(1));
-gain_adjustment_C0_e_2 = abs(hf_zero_C0_e(2));
-gain_adjustment_C0_e_3 = 1/abs(hf_pole_C0_e(1));
-gain_adjustment_C0_e_4 = 1/abs(hf_pole_C0_e(2));
-% gain_adjustment_C0_e_5 = 1/abs(hf_pole_C0_e(3));
-% gain_adjustment_C0_e_6 = abs(hf_zero_C0_e(3));
+%Iterating through all p/z to identify poles and zeros to be removed:
 
-% % Applying adjustement to gain found from zpkdata
-K_C0_e_min = K_PZ_C0_e * gain_adjustment_C0_e_1*gain_adjustment_C0_e_2*gain_adjustment_C0_e_3*gain_adjustment_C0_e_4;
-% 
+min_zeros_C0_e = [];
+min_poles_C0_e = [];
+
+selected_zeros_C0_e = [];
+selected_poles_C0_e = [];
+
+for i = 1:length(Z_C0_e)
+    if abs(imag(Z_C0_e(i))) == max(abs(imag(Z_C0_e)))
+            min_zeros_C0_e= [min_zeros_C0_e; Z_C0_e(i)];    
+    else
+            selected_zeros_C0_e = [selected_zeros_C0_e; Z_C0_e(i)];
+    end
+end           
+        
+
+for i = 1:length(P_C0_e)
+    if abs(imag(P_C0_e(i))) == max(abs(imag(P_C0_e)))
+        min_poles_C0_e = [min_poles_C0_e; P_C0_e(i)];
+    else 
+        selected_poles_C0_e = [selected_poles_C0_e; P_C0_e(i)];
+    end
+end
+
+% Finding appropriate gain adjustement
+
+gain_adjust_C0_e_poles = 1/abs(min_poles_C0_e(1));
+gain_adjust_C0_e_zeros = abs(min_zeros_C0_e);
+gain_scale_C0_e = K_PZ_C0_e * gain_adjust_C0_e_poles *gain_adjust_C0_e_poles*gain_adjust_C0_e_zeros(1)*gain_adjust_C0_e_zeros(2); 
+ 
 % %Creating minimized transfer function C_e_min, displaying it and comparing
 % %it to how it was previously
-% 
-C_e_min = zpk(selected_zeros_C0_e, selected_poles_C0_e, K_C0_e_min);
-% 
+ 
+C_e_min = zpk(selected_zeros_C0_e, selected_poles_C0_e, gain_scale_C0_e);
+
 disp('The minimized transfer function C_e_min:');
 disp(C_e_min);
-% 
+
+
+%Comparison of C0_e and C_e_min
+
 figure;
-bode(C0_e, 'r', C_e_min, 'b--');%  
-legend('Original C0_e', 'Minimized C_e_{min}');%
+bode(C0_e, 'r', C_e_min, 'b--'); 
+legend('Original C0_e', 'Minimized C_e_{min}');
 grid on;
 title('Bode Plot Comparison of C0_e and C_e_{min}');
 
-% Obtaining C_i_min by removing the remaning LF pole 0.005264
-selected_poles_C_i_min = [poles_C0_e(2:6); poles_C0_e(9)];
-C_i_min = zpk(selected_zeros_C0_e, selected_poles_C_i_min, K_C0_e_min);
+
+% Obtaining C_i_min by removing the remaning LF pole
+[Z_C_e_min, P_C_e_min, K_C_e_min] = zpkdata(C_e_min, 'v');
+
+selected_poles_C_e_min = [];
+abs_P_C_e_min = abs(P_C_e_min); 
+LF_P_C_e_min = min(abs_P_C_e_min); 
+
+for i = 1:length(P_C_e_min)
+    if abs(P_C_e_min(i)) == LF_P_C_e_min
+        LF_P_C_e_min = P_C_e_min(i);
+    else
+        selected_poles_C_e_min = [selected_poles_C_e_min; P_C_e_min(i)];
+    end
+end
+
+C_i_min = zpk(Z_C_e_min, selected_poles_C_e_min, K_C_e_min);
 
 % Perform model reduction, specifying the oder of the reduced model
-Ci_red = balred(C_i_min,2); 
+
+% Compute reduced order approximation
+R_3c2 = reducespec(C_i_min,'balanced');
+% Compute MOR data once
+R_3c2 = process(R_3c2);
+% Get reduced-order model
+Ci_red = getrom(R_3c2,Order=2);
 
 % Compare Bode plots for the original and reduced transfer functions
 figure;
@@ -397,23 +438,21 @@ bode(C_i_min, Ci_red);
 legend('Original Ci_min', 'Reduced Ci_red');
 title('Bode Plot Comparison');
 
-[mag_C_i_min, phase_C_i_min, wn_C_i_min] = bode(C_i_min);
-[mag_C_i_red, phase_C_i_red, wn_C_i_red] = bode(Ci_red);
-phase_peak_C_i_min = max(phase_C_i_min);
-phase_peak_Ci_red = max(phase_C_i_red);
 
-%---------------------------------------------------
+
 % Part 3C.2: Controller Analysis and simulation
 F_f = 1;
 
 sys_3c3_CL = 'ClosedLoop_Test';
-load_system(sys3c3_CL)
+load_system(sys_3c3_CL)
 
 %Make sure the value of the Ci_red is Ci_red
 block_path = [sys_3c3_CL, '/Ci_red'];
 set_param(block_path, 'sys', 'Ci_red');
 
-open_system(sys_3c3_CL);
+block_path = [sys_3c3_CL, '/F_f'];
+set_param(block_path, 'sys', 'F_f');
+
 T_3c3_CL = linearize(sys_3c3_CL);
 
 So_3c3_CL = T_3c3_CL(1,1);
@@ -481,10 +520,12 @@ grid on;
 sys_3c3_OL = 'OpenLoop_Test';
 
 load_system(sys_3c3_OL);
-block_path = [sys_3d2_OL, '/Ci_red'];
+block_path = [sys_3c3_OL, '/Ci_red'];
 set_param(block_path, 'sys', 'Ci_red');
 
-open_system(sys_3c3_OL);
+block_path = [sys_3c3_OL, '/F_f'];
+set_param(block_path, 'sys', 'F_f');
+
 T_3c3_OL = linearize(sys_3c3_OL);
 
 % Getting the GM and PM of the open-loop system
@@ -531,10 +572,7 @@ ylabel('Amplitude');
 legend('T_{rudotm}');
 grid on;
 
-%---------------------------------------------------------
-%Save Step responses to structure Results_hinfsyn
-Results_hinfsyn.step_responses = struct('So_response', So_3c3_CL, 'T_d_opt_response', T_d_opt, 'To_response', To_3c3_CL, 'SoG_response', SoG_3c3_CL, 'T_r_udotm_response', T_r_udotm_3c3_CL);
-%---------------------------------------------------------
+
 %---------------------------------------------------------
 %Save P, its zpk form, C0_e, CL_Twz and associated gamma to structure Results_hinfsyn
 Results_hinfsyn.P =P;
@@ -569,15 +607,6 @@ Results_hinfsyn.C_i_min = C_i_min;
 Results_hinfsyn.Ci_red = Ci_red;
 %---------------------------------------------------------
 %---------------------------------------------------------
-%Save mag/phase C_i_min and C_i_red to structure Results_hinfsyn
-Results_hinfsyn.mag_C_i_min = mag_C_i_min;
-Results_hinfsyn.phase_C_i_min = phase_C_i_min;
-Results_hinfsyn.wn_C_i_min = wn_C_i_min;
-Results_hinfsyn.mag_C_i_red = mag_C_i_red;
-Results_hinfsyn.phase_C_i_red = phase_C_i_red;
-Results_hinfsyn.wn_C_i_red = wn_C_i_red;
-%---------------------------------------------------------
-%---------------------------------------------------------
 %Save Ff, Closed Loop T and relavant trasnfer functions to structure Results_hinfsyn
 Results_hinfsyn.F_f = F_f;
 Results_hinfsyn.T_3c3_CL = T_3c3_CL;
@@ -602,7 +631,7 @@ Results_hinfsyn.Dm_3c3_OL = Dm_3c3_OL;
 %% Feedback controller design
 
 sys_3d1 = "Design";
-open_system(sys_3d1);
+load_system(sys_3d1);
 
 % Tunable parameters
 K_star = 2;
@@ -641,7 +670,7 @@ bode(Ci_red_star, Ci_red);
 
 
 
-%% After optimization
+
 
 
 %Get the CL system 
@@ -755,7 +784,7 @@ load_system(sys_3d2_OL);
 block_path = [sys_3d2_OL, '/Ci_red'];
 set_param(block_path, 'sys', 'Ci_red_star');
 
-open_system(sys_3d2_OL);
+load_system(sys_3d2_OL);
 T_3d2_OL = linearize(sys_3d2_OL);
 
 % Getting the GM and PM of the open-loop system
@@ -838,21 +867,7 @@ Results_hinfstruct.SoG_3d2_CL = SoG_3d2_CL;
 Results_hinfstruct.Si_3d2_CL = Si_3d2_CL;
 %---------------------------------------------------------
 
-% Function used for fmincon in question 3B.1
-% function error = compute_step_error(params, ts_d, Md_d)
-%     omega_d = params(1);
-%     zeta_d = params(2);
-% 
-%     T_d = tf([(-omega_d^2/36.6394), omega_d^2] , [1, 2*zeta_d*omega_d, omega_d^2]);
-% 
-%     Td_info = stepinfo(T_d);
-% 
-%     ts_error = 0.5*(Td_info.SettlingTime - ts_d)^2;
-%     Md_error = 0.5*(Td_info.Overshoot - Md_d)^2;
-% 
-%     error = ts_error + Md_error;
-% 
-% end
+
 %% Feedforward
 
 %Part 3E.1 Controller Design
@@ -909,6 +924,7 @@ for i = 1:length(P_F_f_init)
 end    
 
 % Finding appropriate gain adjustement
+
 gain_adjust_F_f_init = [];
 for i = 1:length(truncated_zeros_F_f_init)
     if abs(truncated_zeros_F_f_init(i)) == max(abs(truncated_zeros_F_f_init))
@@ -973,12 +989,25 @@ set_param(block_path, 'sys', 'F_f_3e3');
 T_3e3_CL = linearize(sys_3e3_CL);
 
 Tm_3e3_CL = T_3e3_CL(4,1);
+To_3e3_CL = T_3e3_CL(3,1);
+T_r_udotm_3e3_CL = T_3e3_CL(6,1);
 
+
+figure;
 subplot(2, 2, 1);
-ttitle('Singular Values of W3^{-1}, T_{m}, T_{m}^{*} and T_{m_{ff}}');
+sigma(W3_inv ,'r', Tm_3c3_CL, 'b', Tm_3d2_CL, 'magenta', Tm_3e3_CL, 'green');
+title('Singular Values of W3^{-1}, T_{m}, T_{m}^{*} and T_{m_{ff}}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
 legend('W3^{-1}', 'T_{m}', 'T_{m}^{*}', 'T_{m_{ff}}')
+grid on;
+
+subplot(2, 2, 2);
+step(T_d_opt ,'r', To_3c3_CL, 'b', To_3d2_CL, 'magenta', To_3e3_CL, 'green');
+title('Step response of T_{d}, T_{o}, T_{o}^{*} and T_{o_{ff}}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('T_{d}','T_{o}', 'T_{o}^{*} ', 'T_{o_{ff}}')
 grid on;
 
 subplot(2, 2, 3);
@@ -989,5 +1018,29 @@ ylabel('Magnitude');
 legend('C_{0_{e}}', 'C_{e_{red}}', 'C_{ired}^{*}', 'F_{f}')
 grid on;
 
+subplot(2, 2, 4);
+step((180/pi)*T_r_udotm_3c3_CL ,'b', (180/pi)*T_r_udotm_3d2_CL, 'magenta', (180/pi)*T_r_udotm_3e3_CL, 'green');
+title('Step response of T_{r_{udot_{m}}}, T_{r_{udot_{m}}}^{*}, T_{r_{udot_{m_{ff}}}}');
+xlabel('Time[s]');
+ylabel('Amplitude [deg/s]');
+legend('T_{rudotm}', 'T_{rudotm}^{*}', 'T_{r_{udot_{m_{ff}}}}');
+grid on;
+
+
+% Function used for fmincon in question 3B.1
+function error = compute_step_error(params, ts_d, Md_d)
+    omega_d = params(1);
+    zeta_d = params(2);
+
+    T_d = tf([(-omega_d^2/36.6394), omega_d^2] , [1, 2*zeta_d*omega_d, omega_d^2]);
+
+    Td_info = stepinfo(T_d, 'SettlingTimeThreshold', 5/100);
+
+    ts_error = (Td_info.SettlingTime - ts_d)^2; %standard L2 norm loss function for optimization
+    Md_error = (Td_info.Overshoot - Md_d)^2; %standard L2 norm loss function for optimization
+
+    error = ts_error + Md_error;
+
+end
 
 
