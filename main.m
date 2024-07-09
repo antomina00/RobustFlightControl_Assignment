@@ -215,7 +215,7 @@ W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
 % Initialize values of makeweight for the inverse of W2
 dcgain_w2_dB = 100;
 hfgain_w2_dB = -60;
-mag_w2_dB = -17.5;
+mag_w2_dB = -17.75; %-17.5
 freq_w2_db = 151; %frequency at -3.01 dB actuator bandwidth
 
 % Convert dB gains to abs gains
@@ -232,7 +232,7 @@ W2_inv = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 % --------------------------------------------
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
-mag_w3_dB = -15;
+mag_w3_dB = -14.00; %-16.50
 freq_w3 = 4;
 
 % Convert dB gains to absolute gains
@@ -725,6 +725,7 @@ Si_3d2_CL = T_3d2_CL(5,2);
 % Define the frequency range for singular value plot
 omega = logspace(-3, 3, 1000);
 
+
 % Plot the singular values
 figure;
 subplot(2, 3, 1);
@@ -827,7 +828,7 @@ subplot(2, 2, 4);
 step((180/pi)*T_r_udotm_3c3_CL ,'b', (180/pi)*T_r_udotm_3d2_CL, 'magenta');
 title('Step response of T_{r_{udot_{m}}} and T_{r_{udot_{m}}}^{*}');
 xlabel('Time[s]');
-ylabel('Amplitude');
+ylabel('Deflection rate [deg/s]');
 legend('T_{rudotm}', 'T_{rudotm}^{*}');
 grid on;
 
@@ -949,6 +950,22 @@ title('Singular value plot of F_{f_{init}} vs F_{f_{lf}}')
 grid on;
 legend('F_{f_{init}}', 'F_{f_{lf}}')
 
+% Get reduced models
+reducedFf1 = balred(F_f_lf, 1);
+reducedFf2 = balred(F_f_lf, 2);
+reducedFf3 = balred(F_f_lf, 3);
+
+% Compare reduce models
+figure;
+hold on;
+bode(F_f_lf, 'r'); % Original system in blue
+bode(reducedFf1, 'b'); % 1-state reduction in red
+bode(reducedFf2, 'm'); % 2-state reduction in green
+bode(reducedFf3, 'g--'); % 3-state reduction in magenta
+hold off;
+legend('Original (5 states)', 'Reduced (1 state)', 'Reduced (2 states)', 'Reduced (3 states)');
+title('Bode Responses of Original and Reduced Models');
+
 %Script below obtained from Model Reducer app 
 %-----------------------------------------------------------------
 % Reduce LTI model order using balanced truncation 
@@ -1022,9 +1039,18 @@ subplot(2, 2, 4);
 step((180/pi)*T_r_udotm_3c3_CL ,'b', (180/pi)*T_r_udotm_3d2_CL, 'magenta', (180/pi)*T_r_udotm_3e3_CL, 'green');
 title('Step response of T_{r_{udot_{m}}}, T_{r_{udot_{m}}}^{*}, T_{r_{udot_{m_{ff}}}}');
 xlabel('Time[s]');
-ylabel('Amplitude [deg/s]');
+ylabel('Deflection rate [deg/s]');
 legend('T_{rudotm}', 'T_{rudotm}^{*}', 'T_{r_{udot_{m_{ff}}}}');
 grid on;
+
+% Save relevant variables to the dictionary Results_FeedForward
+Results_FeedForward.wn_F_f_init = wn_F_f_init;
+Results_FeedForward.F_f_lf = F_f_lf;
+Results_FeedForward.F_f_3e3 = F_f_3e3;
+Results_FeedForward.T_3e3_CL = T_3e3_CL;
+Results_FeedForward.Tm_3e3_CL = Tm_3e3_CL;
+Results_FeedForward.To_3e3_CL = To_3e3_CL;
+Results_FeedForward.T_r_udotm_3e3_CL = T_r_udotm_3e3_CL;
 
 
 % Function used for fmincon in question 3B.1
