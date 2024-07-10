@@ -1,4 +1,4 @@
-%% Parameters of the system
+%% 1: Parameters of the system
 g = 9.80665; % m/s^2 gravity
 a = 316.0561; %m/s at operating point altitude 6096m
 M = 3; % Mach number at operating point
@@ -14,7 +14,7 @@ zeta_a = 0.7; % actuator damping ratio
 V = M*a; % m/s velocity at operating point
 alpha_FLC = 20 * (pi/180);
 
-%% Defining the A, B, C, D matrices for the short period model of the system as well as the state space model
+%% 1: Defining the A, B, C, D matrices for the short period model of the system as well as the state space model
 
 A_sp = [-Z_alpha/V, 1.0; M_alpha, M_q];
 B_sp = [-Z_delta/V; M_delta];
@@ -27,7 +27,7 @@ G_m.StateName = {'x1', 'x2'};
 G_m.OutputName = {'y1', 'y2'};
 save G_m
 
-%% Defining the A, B, C, D matrices for the actuator model of the system as well as its state space model
+%% 1: Defining the A, B, C, D matrices for the actuator model of the system as well as its state space model
 
 A_act = [0.0, 1.0; -omega_a^2, -2*zeta_a*omega_a];
 B_act = [0.0; omega_a^2];
@@ -40,7 +40,7 @@ G_act.StateName = {'x3', 'x4'};
 G_act.OutputName = {'u_m', 'udot_m'};
 save G_act
 
-%% Loading Simulink model to obatin state space of open loop actuator + system dynamics 
+%% 1: Loading Simulink model to obatin state space of open loop actuator + system dynamics 
 
 sys_am = "Airframe";
 load_system(sys_am)
@@ -67,7 +67,7 @@ T_reorder = [0,0,1,0;
              0,1,0,0];
 G_am_reord = ss2ss(G_am, T_reorder);
 
-%% Analyze system stability
+%% 1: Analyze system stability
 
 % Get the transfer function matrix
 tf_G_am = tf(G_am_reord);
@@ -113,7 +113,7 @@ outputDir = 'Figures';
 % iopzmap(G_am_reord);
 % saveas(gcf, fullfile(outputDir, 'ioPZMap_AirframeModel.pdf'));
 
-%% Loop Shaping
+%% 2: Loop Shaping
 
 % Damping Gain Design
 
@@ -191,7 +191,7 @@ T = T_full(1,1);
 zpk_T = zpk(T);
 % saveas(gcf, fullfile(outputDir, 'Step_Response_T_23.pdf'));
 
-%% Mixed Sensitivity
+%% 3.A/B/C: Mixed Sensitivity (hinfsyn)
 
 % Part #3A - Weighting Filters
 
@@ -628,7 +628,7 @@ Results_hinfsyn.Wcg_3c3_OL = Wcg_3c3_OL;
 Results_hinfsyn.Wcp_3c3_OL = Wcp_3c3_OL;
 Results_hinfsyn.Dm_3c3_OL = Dm_3c3_OL;
 %---------------------------------------------------------
-%% Feedback controller design
+%% 3D: Feedback controller design (hinfstruct)
 
 sys_3d1 = "Design";
 load_system(sys_3d1);
@@ -667,8 +667,6 @@ Ci_red_star = minreal(Ci_red_star);
 
 figure;
 bode(Ci_red_star, Ci_red);
-
-
 
 
 
@@ -834,7 +832,7 @@ grid on;
 
 
 
-
+Results_hinfstruct = struct();
 %---------------------------------------------------------
 % Save P, Ce_red_star and its relevant information and Ci_red_star to the structure
 Results_hinfstruct.P = P_3d1;
@@ -869,7 +867,7 @@ Results_hinfstruct.Si_3d2_CL = Si_3d2_CL;
 %---------------------------------------------------------
 
 
-%% Feedforward
+%% 3E: Feedforward (ff)
 
 %Part 3E.1 Controller Design
 
@@ -1053,6 +1051,55 @@ Results_FeedForward.To_3e3_CL = To_3e3_CL;
 Results_FeedForward.T_r_udotm_3e3_CL = T_r_udotm_3e3_CL;
 
 
+
+
+
+%% 4: Signal-based redesign (feedback controller systune)
+
+% A. Tuning Interface
+% A.1 Tuning Interface generation
+
+% Step 1
+
+Results_systune = struct();
+Results_systune.Ga = G_act;
+Results_systune.Gm = G_m;
+Results_systune.Kq = C_q;
+Results_systune.Ksc = C_sc;
+Results_systune.Td = T_d_opt;
+Results_systune.W1 = W1;
+Results_systune.W2 = W2;
+Results_systune.W3 = W3;
+Results_systune.F_f = 1;
+Results_systune.Ci = Ci_red_star;
+
+% Step 2
+sys_4A = 'ClosedLoop_Test_systune';
+load_system(sys_4A);
+
+block_path = [sys_4A, '/Actuator_(G_a)'];
+set_param(block_path, 'sys', 'Results_systune.Ga');
+
+block_path = [sys_4A, '/Missile_(G_m)'];
+set_param(block_path, 'sys', 'Results_systune.Gm');
+
+block_path = [sys_4A, '/C_q'];
+set_param(block_path, 'sys', 'Results_systune.Kq');
+
+block_path = [sys_4A, '/C_sc'];
+set_param(block_path, 'sys', 'Results_systune.Ksc');
+
+block_path = [sys_4A, '/Reference_Model'];
+set_param(block_path, 'sys', 'Results_systune.Td');
+
+block_path = [sys_4A, '/Ci_red'];
+set_param(block_path, 'sys', 'Results_systune.Ci');
+
+block_path = [sys_4A, '/F_f'];
+set_param(block_path, 'sys', 'Results_systune.F_f');
+
+
+
 % Function used for fmincon in question 3B.1
 function error = compute_step_error(params, ts_d, Md_d)
     omega_d = params(1);
@@ -1068,5 +1115,3 @@ function error = compute_step_error(params, ts_d, Md_d)
     error = ts_error + Md_error;
 
 end
-
-
