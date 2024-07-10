@@ -465,7 +465,7 @@ SoG_3c3_CL = T_3c3_CL(3,2);
 Si_3c3_CL = T_3c3_CL(5,2);
 
 % Define the frequency range for singular value plot
-omega = logspace(-3, 3, 1000);
+omega = logspace(-2.5, 3, 1000);
 
 % Plot the singular values
 figure;
@@ -721,7 +721,7 @@ SoG_3d2_CL = T_3d2_CL(3,2);
 Si_3d2_CL = T_3d2_CL(5,2);
 
 % Define the frequency range for singular value plot
-omega = logspace(-3, 3, 1000);
+omega = logspace(-2.5, 3, 1000);
 
 
 % Plot the singular values
@@ -1056,6 +1056,34 @@ Results_FeedForward.T_r_udotm_3e3_CL = T_r_udotm_3e3_CL;
 
 %% 4: Signal-based redesign (feedback controller systune)
 
+% Initialize values of makeweight for the inverse of W2
+dcgain_w2_dB = 100;
+hfgain_w2_dB = -60;
+mag_w2_dB = -17.75; %-17.5
+freq_w2_db = 151; %frequency at -3.01 dB actuator bandwidth
+
+% Convert dB gains to abs gains
+hfgain_w2_abs = db2mag(hfgain_w2_dB);
+mag_w2_abs = db2mag(mag_w2_dB);
+dcgain_w2_abs = db2mag(dcgain_w2_dB);
+
+W2_inv = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
+W2 = 1/W2_inv;
+
+
+dcgain_w3_dB = -60;
+hfgain_w3_db = M_s_min;
+mag_w3_dB = -24.8; %-16.50
+freq_w3 = 4;
+
+% Convert dB gains to absolute gains
+dcgain_w3_abs = db2mag(dcgain_w3_dB);
+mag_w3_abs = db2mag(mag_w3_dB);
+hfgain_w3_abs = db2mag(hfgain_w3_db);
+% 
+W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
+W3 =1/W3_inv;
+
 % A. Tuning Interface
 % A.1 Tuning Interface generation
 
@@ -1070,6 +1098,9 @@ Results_systune.Td = T_d_opt;
 Results_systune.W1 = W1;
 Results_systune.W2 = W2;
 Results_systune.W3 = W3;
+Results_systune.W1_inv = W1_inv;
+Results_systune.W2_inv = W2_inv;
+Results_systune.W3_inv = W3_inv;
 Results_systune.F_f = 1;
 Results_systune.Ci = Ci_red_star;
 
@@ -1098,9 +1129,92 @@ set_param(block_path, 'sys', 'Results_systune.Ci');
 block_path = [sys_4A, '/F_f'];
 set_param(block_path, 'sys', 'Results_systune.F_f');
 
+% Step 5
+
+% Create system data with slTuner interface
+TunedBlocks = {'ClosedLoop_Test_systune/Ci_red'};
+AnalysisPoints = {'ClosedLoop_Test_systune/r/1'; ...
+                  'ClosedLoop_Test_systune/Ci_red/1'; ...
+                  'ClosedLoop_Test_systune/Demux1/1'; ...
+                  'ClosedLoop_Test_systune/Reference_Model/1'; ...
+                  'ClosedLoop_Test_systune/Sum1/1'; ...
+                  'ClosedLoop_Test_systune/Sum2/1'};
+% Specify the custom options
+Options = slTunerOptions('AreParamsTunable',false);
+% Create the slTuner object
+CL0 = slTuner('ClosedLoop_Test_systune',TunedBlocks,AnalysisPoints,Options);
+
+ClosedLoop_Test_systune_Ci_red = tunableTF('ClosedLoop_Test_systune_Ci_red',2,2);
+ClosedLoop_Test_systune_Ci_red.Numerator.Value = [19.6439235019643 582.452028248495 8990.92483168058];
+ClosedLoop_Test_systune_Ci_red.Denominator.Value = [1 54.116609440897 1308.74650803977];
+setBlockParam(CL0,'ClosedLoop_Test_systune/Ci_red',ClosedLoop_Test_systune_Ci_red);
+
+% Create tuning goal to limit gain of an I/O transfer function
+% Inputs and outputs
+Inputs = {'ClosedLoop_Test_systune/r/1[r]'};
+Outputs = {'ClosedLoop_Test_systune/Sum2/1[e1]'};
+% Tuning goal specifications
+MaxGain = Results_systune.W1_inv; % Maximum gain as a function of frequency
+% Create tuning goal for gain
+So = TuningGoal.Gain(Inputs,Outputs,MaxGain);
+So.Name = 'So'; % Tuning goal name
+
+% Create tuning goal to limit gain of an I/O transfer function
+% Inputs and outputs
+Inputs = {'ClosedLoop_Test_systune/r/1[r]'};
+Outputs = {'ClosedLoop_Test_systune/Ci_red/1[u]'};
+% Tuning goal specifications
+MaxGain = Results_systune.W2_inv; % Maximum gain as a function of frequency
+% Create tuning goal for gain
+CeSo = TuningGoal.Gain(Inputs,Outputs,MaxGain);
+CeSo.Name = 'CeSo'; % Tuning goal name
+
+% Create tuning goal to limit gain of an I/O transfer function
+% Inputs and outputs
+Inputs = {'ClosedLoop_Test_systune/r/1[r]'};
+Outputs = {'ClosedLoop_Test_systune/Sum1/1[e1_d]'};
+% Tuning goal specifications
+MaxGain = Results_systune.W3_inv; % Maximum gain as a function of frequency
+% Create tuning goal for gain
+Tm = TuningGoal.Gain(Inputs,Outputs,MaxGain);
+Tm.Name = 'Tm'; % Tuning goal name
+
+% Create option set for systune command
+Options = systuneOptions();
+Options.RandomStart = 20; % Number of randomized starts
+Options.UseParallel = true; % Parallel processing flag
+
+% Set soft and hard goals
+SoftGoals = [];
+HardGoals = [ So ; ...
+              CeSo ; ...
+              Tm ];
+
+% Tune the parameters with soft and hard goals
+[CL1,fSoft,gHard,Info] = systune(CL0,SoftGoals,HardGoals,Options);
+
+% View tuning results
+figure;
+viewSpec([SoftGoals;HardGoals],CL1);
+
+%% B Feedback Controller redesign(systune)
+
+% B.1 Controller Design
+tunedController_4B = getBlockValue(CL1, 'ClosedLoop_Test_systune/Ci_red');
+zpk_Ci_red_hash = zpk(tunedController_4B);
+
+%Generating PZ Map for Ci_red_star and Ci_red_hash
+figure;
+grid on;
+iopzmap(Results_systune.Ci, zpk_Ci_red_hash);
+legend('C_{i,red}^*', 'C_{i,red}^#');
+
+%% B.2 Controller Analysis & Simulation
 
 
-% Function used for fmincon in question 3B.1
+
+
+%% Function used for fmincon in question 3B.1
 function error = compute_step_error(params, ts_d, Md_d)
     omega_d = params(1);
     zeta_d = params(2);
