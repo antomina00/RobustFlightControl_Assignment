@@ -1003,9 +1003,14 @@ set_param(block_path, 'sys', 'F_f_3e3');
 
 T_3e3_CL = linearize(sys_3e3_CL);
 
+So_3e3_CL = T_3e3_CL(1,1);
+CeSo_3e3_CL = T_3e3_CL(2,1);
 Tm_3e3_CL = T_3e3_CL(4,1);
 To_3e3_CL = T_3e3_CL(3,1);
 T_r_udotm_3e3_CL = T_3e3_CL(6,1);
+min_Ti_3e3_CL = T_3e3_CL(2,2);
+SoG_3e3_CL = T_3e3_CL(3,2);
+Si_3e3_CL = T_3e3_CL(5,2);
 
 
 figure;
@@ -1027,10 +1032,10 @@ grid on;
 
 subplot(2, 2, 3);
 sigma(Ci_red, 'r', Ci_red_star, 'magenta', F_f_3e3, 'green', omega);
-title('Singular Values of C_{0_{e}}, C_{e_{red}}, C_{i_{red}}^{*} and F_{f}');
+title('Singular Values of C_{e_{red}}, C_{i_{red}}^{*} and F_{f}');
 xlabel('Frequency (rad/s)');
 ylabel('Magnitude');
-legend('C_{0_{e}}', 'C_{e_{red}}', 'C_{ired}^{*}', 'F_{f}')
+legend('C_{e_{red}}', 'C_{ired}^{*}', 'F_{f}')
 grid on;
 
 subplot(2, 2, 4);
@@ -1073,7 +1078,7 @@ W2 = 1/W2_inv;
 
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
-mag_w3_dB = -24.8; %-16.50
+mag_w3_dB = -24.8; %-24.8
 freq_w3 = 4;
 
 % Convert dB gains to absolute gains
@@ -1200,8 +1205,8 @@ viewSpec([SoftGoals;HardGoals],CL1);
 %% B Feedback Controller redesign(systune)
 
 % B.1 Controller Design
-tunedController_4B = getBlockValue(CL1, 'ClosedLoop_Test_systune/Ci_red');
-zpk_Ci_red_hash = zpk(tunedController_4B);
+Ci_red_hash = getBlockValue(CL1, 'ClosedLoop_Test_systune/Ci_red');
+zpk_Ci_red_hash = zpk(Ci_red_hash);
 
 %Generating PZ Map for Ci_red_star and Ci_red_hash
 figure;
@@ -1210,8 +1215,113 @@ iopzmap(Results_systune.Ci, zpk_Ci_red_hash);
 legend('C_{i,red}^*', 'C_{i,red}^#');
 
 %% B.2 Controller Analysis & Simulation
+sys_4b2_CL = 'ClosedLoop_Test_systune';
+load_system(sys_4b2_CL);
+
+%Change the value of the F_f to be unitary
+block_path = [sys_4b2_CL, '/F_f'];
+set_param(block_path, 'sys', 'Results_systune.F_f');
+
+%Change the value of the Ci_red to Ci_red_star
+block_path = [sys_4b2_CL, '/Ci_red'];
+set_param(block_path, 'sys', 'zpk_Ci_red_hash');
+
+T_4b2_CL = linearize(sys_4b2_CL);
+
+So_4b2_CL = T_4b2_CL(1,1);
+CeSo_4b2_CL = T_4b2_CL(2,1);
+To_4b2_CL = T_4b2_CL(3,1);
+Tm_4b2_CL = T_4b2_CL(4,1);
+T_r_udotm_4b2_CL = T_4b2_CL(6,1);
+min_Ti_4b2_CL = T_4b2_CL(2,2);
+SoG_4b2_CL = T_4b2_CL(3,2);
+Si_4b2_CL = T_4b2_CL(5,2);
+
+% Plot the singular values
+figure;
+subplot(2, 3, 1);
+sigma(W1_inv ,'red', So_3e3_CL, 'g', So_4b2_CL, 'black', omega);
+title('Singular Values of W1^{-1}, S_{o}^{*} and S_{o}^{#}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W^{-1}', 'S_{o}^{*}', 'S_{o}^{#}')
+grid on;
+
+subplot(2, 3, 2);
+sigma(W2_inv, 'r', CeSo_3e3_CL, 'g', CeSo_4b2_CL, 'black', omega);
+title('Singular Values of W2^{-1}, C_{e}S_{o}^{*} and C_{e}S_{o}^{#}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W2^{-1}', 'C_{e}S_{o}^{*}', 'C_{e}S_{o}^{#}')
+grid on;
+
+subplot(2, 3, 3);
+sigma(W3_inv, 'r', Tm_3e3_CL, 'g', Tm_4b2_CL, 'black', omega);
+title('Singular Values of W3^{-1}, T_{m_{ff}} and T_{m}^{#}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('W3^{-1}', 'T_{m_{ff}}', 'T_{m}^{#}')
+grid on;
+
+subplot(2, 3, 4);
+sigma(-min_Ti_3e3_CL, 'g', To_3e3_CL, 'g--', -min_Ti_4b2_CL, 'black', To_4b2_CL, 'black--', omega);
+title('Singular Values of T_{i_{ff}}, T_{o_{ff}}, T_{i}^{#}, T_{i}^{#}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('T_{i_{ff}}', 'T_{o_{ff}}', 'T_{i}^{#}', 'T_{i}^{#}');
+grid on;
+
+subplot(2, 3, 5);
+sigma(SoG_3e3_CL, 'g', SoG_4b2_CL, 'black', omega);
+title('Singular Values of S_{o_{ff}}G and S_{o}^{#}G');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('S_{o_{ff}}G', 'S_{o}^{#}G');
+grid on;
+
+subplot(2, 3, 6);
+sigma(Ci_red, 'r', Ci_red_star, 'magenta', F_f_3e3, 'green', Ci_red_hash, 'black', omega);
+title('Singular Values of C_{e_{red}}, C_{i_{red}}^{*}, F_{f} and C_{i, red}^{#}');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude');
+legend('C_{e_{red}}', 'C_{ired}^{*}', 'F_{f}', 'C_{i, red}^{#}')
+grid on;
 
 
+% Time-domain analysis
+
+figure;
+subplot(2, 2, 1);
+step(So_3e3_CL ,'g', So_4b2_CL, 'black');
+title('Step response of S_{o}^{*} and S_{o}^{#}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('S_{o}^{*}', 'S_{o}^{#}')
+grid on;
+
+subplot(2, 2, 2);
+step(T_d_opt ,'r', To_3e3_CL, 'g', To_4b2_CL, 'black');
+title('Step response of T_{d}, T_{o_{ff}} and T_{o}^{#}');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('T_{d}','T_{o_{ff}}', 'T_{o}^{#}')
+grid on;
+
+subplot(2, 2, 3);
+step(SoG_3e3_CL ,'g', SoG_4b2_CL, 'black');
+title('Step response of S_{o_{ff}}G and S_{o}^{#}G');
+xlabel('Time[s]');
+ylabel('Amplitude');
+legend('S_{o_{ff}}G', 'S_{o}^{#}G')
+grid on;
+
+subplot(2, 2, 4);
+step((180/pi)*T_r_udotm_3e3_CL ,'g', (180/pi)*T_r_udotm_4b2_CL, 'black');
+title('Step response of T_{r_{udot_{m_{ff}}}} and T_{r_{udot_{m}}}^{#}');
+xlabel('Time[s]');
+ylabel('Deflection rate [deg/s]');
+legend(' T_{r_{udot_{m_{ff}}}}', 'T_{r_{udot_{m}}}^{#}');
+grid on;
 
 
 %% Function used for fmincon in question 3B.1
