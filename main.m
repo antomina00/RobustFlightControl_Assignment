@@ -169,8 +169,8 @@ load_system(sys_cqcs);
 G = linearize(sys_cqcs);
 zpk_G = zpk(G);
 
-% figure;
-% step(G);
+figure;
+step(G);
 % saveas(gcf, fullfile(outputDir, 'Step_Response_G_22.pdf'));
 
 % Integral Gain Design
@@ -215,7 +215,7 @@ W1_inv = makeweight(dcgain_w1_abs, [freq_w1, mag_w1_abs], hfgain_w1_db);
 % Initialize values of makeweight for the inverse of W2
 dcgain_w2_dB = 100;
 hfgain_w2_dB = -60;
-mag_w2_dB = -17.75; %-17.5
+mag_w2_dB = -15.3; %-17.5
 freq_w2_db = 151; %frequency at -3.01 dB actuator bandwidth
 
 % Convert dB gains to abs gains
@@ -232,7 +232,7 @@ W2_inv = makeweight(dcgain_w2_abs, [freq_w2_db, mag_w2_abs], hfgain_w2_abs);
 % --------------------------------------------
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
-mag_w3_dB = -14.00; %-16.50
+mag_w3_dB = -21.5; %-16.50
 freq_w3 = 4;
 
 % Convert dB gains to absolute gains
@@ -1064,7 +1064,7 @@ Results_FeedForward.T_r_udotm_3e3_CL = T_r_udotm_3e3_CL;
 % Initialize values of makeweight for the inverse of W2
 dcgain_w2_dB = 100;
 hfgain_w2_dB = -60;
-mag_w2_dB = -17.75; %-17.5
+mag_w2_dB = -15.3; %-17.5
 freq_w2_db = 151; %frequency at -3.01 dB actuator bandwidth
 
 % Convert dB gains to abs gains
@@ -1078,7 +1078,7 @@ W2 = 1/W2_inv;
 
 dcgain_w3_dB = -60;
 hfgain_w3_db = M_s_min;
-mag_w3_dB = -24.8; %-24.8
+mag_w3_dB = -31; %-24.8
 freq_w3 = 4;
 
 % Convert dB gains to absolute gains
@@ -1202,7 +1202,7 @@ HardGoals = [ So ; ...
 figure;
 viewSpec([SoftGoals;HardGoals],CL1);
 
-%% B Feedback Controller redesign(systune)
+% B Feedback Controller redesign(systune)
 
 % B.1 Controller Design
 Ci_red_hash = getBlockValue(CL1, 'ClosedLoop_Test_systune/Ci_red');
@@ -1214,7 +1214,7 @@ grid on;
 iopzmap(Results_systune.Ci, zpk_Ci_red_hash);
 legend('C_{i,red}^*', 'C_{i,red}^#');
 
-%% B.2 Controller Analysis & Simulation
+% B.2 Controller Analysis & Simulation
 sys_4b2_CL = 'ClosedLoop_Test_systune';
 load_system(sys_4b2_CL);
 
