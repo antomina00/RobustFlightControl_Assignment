@@ -241,9 +241,9 @@ mag_w3_abs = db2mag(mag_w3_dB);
 hfgain_w3_abs = db2mag(hfgain_w3_db);
 % 
 W3_inv = makeweight(dcgain_w3_abs, [freq_w3, mag_w3_abs], hfgain_w3_abs);
-% --------------------------------------------
+%--------------------------------------------
 
-
+% W3_inv = W1_inv;
 % Invert W1, W2 and W3 filters to obtain the correct TF
 W1  = 1/W1_inv;
 W2 = 1/W2_inv;
@@ -431,14 +431,18 @@ R_3c2 = reducespec(C_i_min,'balanced');
 R_3c2 = process(R_3c2);
 % Get reduced-order model
 Ci_red = getrom(R_3c2,Order=2);
-
+zpk_Ci_red = zpk(Ci_red);
 % Compare Bode plots for the original and reduced transfer functions
 figure;
 bode(C_i_min, Ci_red);
 legend('Original Ci_min', 'Reduced Ci_red');
 title('Bode Plot Comparison');
 
-
+figure;
+iopzmap(C_i_min, Ci_red);
+grid on;
+legend('C_{i_{min}}', 'C_{i_{red}}')
+title('PoleZero map comparison')
 
 % Part 3C.2: Controller Analysis and simulation
 F_f = 1;
@@ -532,6 +536,11 @@ T_3c3_OL = linearize(sys_3c3_OL);
 [Gm_3c3_OL,Pm_3c3_OL,Wcg_3c3_OL,Wcp_3c3_OL] = margin(T_3c3_OL);
 
 Dm_3c3_OL = (pi/180)*Pm_3c3_OL/Wcg_3c3_OL; %seconds
+
+disp('These are the margins of the open-loop system')
+disp(['Gain Margin: ', num2str(Gm_3c3_OL)]);
+disp(['Phase Margin: ', num2str(Pm_3c3_OL)]);
+disp(['Delay Margin: ', num2str(Dm_3c3_OL)]);
 
 figure;
 bode(T_3c3_OL);
